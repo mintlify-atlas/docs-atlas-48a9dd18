@@ -1,0 +1,208 @@
+---
+title: "Authentication Actions"
+description: "Server actions for authentication and profile management"
+---
+
+## Overview
+
+The authentication module provides server actions for user authentication, profile management, and session handling using Supabase Auth.
+
+All functions in this module are Next.js Server Actions (marked with `'use server'`).
+
+---
+
+## signIn
+
+Authenticates a user with email and password.
+
+```typescript
+async function signIn(formData: { 
+  email: string; 
+  password: string 
+}): Promise<{ error?: string }>
+```
+
+<ParamField path="formData" type="object" required>
+  User credentials
+  
+  <Expandable title="properties">
+    <ResponseField name="email" type="string" required>
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="password" type="string" required>
+      User's password
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if authentication fails, undefined on success
+</ResponseField>
+
+<Note>
+  On successful sign in, the user is automatically redirected to `/dashboard/calendar`
+</Note>
+
+### Example
+
+```typescript
+import { signIn } from '@/lib/actions/auth'
+
+const result = await signIn({
+  email: 'user@cloro.com',
+  password: 'secure-password'
+})
+
+if (result?.error) {
+  console.error('Login failed:', result.error)
+}
+```
+
+---
+
+## signUp
+
+Registers a new user account.
+
+```typescript
+async function signUp(formData: { 
+  email: string; 
+  password: string; 
+  nombre_completo: string 
+}): Promise<{ error?: string }>
+```
+
+<ParamField path="formData" type="object" required>
+  New user registration data
+  
+  <Expandable title="properties">
+    <ResponseField name="email" type="string" required>
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="password" type="string" required>
+      User's password
+    </ResponseField>
+    
+    <ResponseField name="nombre_completo" type="string" required>
+      User's full name
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if registration fails, undefined on success
+</ResponseField>
+
+<Warning>
+  New users are automatically assigned the `pendiente` role and redirected to `/dashboard/pendiente` until an admin approves their account.
+</Warning>
+
+### Example
+
+```typescript
+import { signUp } from '@/lib/actions/auth'
+
+const result = await signUp({
+  email: 'nuevo@cloro.com',
+  password: 'secure-password',
+  nombre_completo: 'María González'
+})
+
+if (result?.error) {
+  console.error('Registration failed:', result.error)
+}
+```
+
+---
+
+## signOut
+
+Ends the user's session and signs them out.
+
+```typescript
+async function signOut(): Promise<void>
+```
+
+### Returns
+
+Void. Redirects to `/login` after signing out.
+
+### Example
+
+```typescript
+import { signOut } from '@/lib/actions/auth'
+
+// Sign out the current user
+await signOut()
+```
+
+---
+
+## getCurrentProfile
+
+Retrieves the current authenticated user's profile information.
+
+```typescript
+async function getCurrentProfile(): Promise<Profile | null>
+```
+
+### Returns
+
+<ResponseField name="profile" type="Profile | null">
+  The user's profile object, or `null` if not authenticated
+  
+  <Expandable title="Profile structure">
+    <ResponseField name="id" type="string">
+      User's unique identifier
+    </ResponseField>
+    
+    <ResponseField name="nombre_completo" type="string | null">
+      User's full name
+    </ResponseField>
+    
+    <ResponseField name="email" type="string | null">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="rol" type="UserRole">
+      User's role: `admin`, `coordinadora`, `laboratorio`, `cedis`, `pendiente`, or `consulta`
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      ISO timestamp of profile creation
+    </ResponseField>
+    
+    <ResponseField name="updated_at" type="string">
+      ISO timestamp of last profile update
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```typescript
+import { getCurrentProfile } from '@/lib/actions/auth'
+
+const profile = await getCurrentProfile()
+
+if (!profile) {
+  // User not authenticated
+  return redirect('/login')
+}
+
+console.log('Current user:', profile.nombre_completo)
+console.log('Role:', profile.rol)
+```
+
+---
+
+## Related Types
+
+- [Profile](/api/types/profiles#profile)
+- [UserRole](/api/types/profiles#userrole)

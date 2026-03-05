@@ -1,0 +1,267 @@
+---
+title: Environment Variables
+description: Configure environment variables for the Procurement Calendar application
+---
+
+The Procurement Calendar application requires specific environment variables to connect to Supabase and function properly.
+
+## Required Variables
+
+### Supabase Connection
+
+These variables are required for the application to connect to your Supabase project:
+
+<CodeGroup>
+```bash .env.local
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+```bash .env.production
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+</CodeGroup>
+
+### Variable Descriptions
+
+#### `NEXT_PUBLIC_SUPABASE_URL`
+
+- **Type**: Public (exposed to browser)
+- **Required**: Yes
+- **Description**: Your Supabase project URL
+- **Example**: `https://xyzcompany.supabase.co`
+- **Used in**: Client-side and server-side Supabase connections
+
+**Where to find it:**
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
+2. Select your project
+3. Navigate to **Project Settings** → **API**
+4. Copy the **Project URL**
+
+#### `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+- **Type**: Public (exposed to browser)
+- **Required**: Yes
+- **Description**: Supabase anonymous/public key for client-side operations
+- **Used in**: Client-side Supabase connections, respects Row Level Security (RLS)
+
+**Where to find it:**
+1. Go to **Project Settings** → **API**
+2. Copy the **anon** **public** key (under "Project API keys")
+
+<Info>
+  The anon key is safe to expose publicly because it respects Row Level Security policies. All database access is controlled by RLS.
+</Info>
+
+#### `SUPABASE_SERVICE_ROLE_KEY`
+
+- **Type**: Secret (server-side only)
+- **Required**: Yes (for admin operations)
+- **Description**: Supabase service role key with full database access, bypasses RLS
+- **Used in**: Server-side admin operations like user management
+
+**Where to find it:**
+1. Go to **Project Settings** → **API**
+2. Copy the **service_role** key
+3. Click "Reveal" to see the full key
+
+<Warning>
+  **Critical Security Warning**: The service_role key bypasses all Row Level Security policies. Never expose it in client-side code or commit it to version control.
+</Warning>
+
+**Code usage example:**
+
+```typescript lib/actions/users.ts
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+async function getAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+// Used for admin operations like deleting users
+export async function deleteUser(userId: string) {
+  const adminClient = await getAdminClient()
+  const { error } = await adminClient.auth.admin.deleteUser(userId)
+  return { error: error?.message }
+}
+```
+
+## Setup Instructions
+
+<Steps>
+  <Step title="Create Local Environment File">
+    Create a `.env.local` file in your project root:
+
+    ```bash
+    touch .env.local
+    ```
+
+    <Note>
+      `.env.local` is automatically ignored by git (included in `.gitignore`). Never commit this file.
+    </Note>
+  </Step>
+
+  <Step title="Add Your Variables">
+    Copy the template and fill in your values:
+
+    ```bash .env.local
+    # Supabase Configuration
+    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    ```
+  </Step>
+
+  <Step title="Verify Configuration">
+    Start your development server:
+
+    ```bash
+    npm run dev
+    ```
+
+    If configured correctly, you should:
+    - Be able to access the login page at `http://localhost:3000/login`
+    - Not see any Supabase connection errors in the console
+  </Step>
+</Steps>
+
+## How Variables Are Used
+
+### Client-Side Connection
+
+The browser client uses public variables:
+
+```typescript lib/supabase/client.ts
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+```
+
+### Server-Side Connection
+
+Server components use the same public variables but with cookie handling:
+
+```typescript lib/supabase/server.ts
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          // Handle cookie setting
+        },
+      },
+    }
+  )
+}
+```
+
+### Middleware Connection
+
+Middleware protects routes and manages authentication:
+
+```typescript lib/supabase/middleware.ts
+export async function updateSession(request: NextRequest) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { /* cookie configuration */ }
+  )
+  
+  // Protect dashboard routes
+  if (!user && pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect('/login')
+  }
+}
+```
+
+## Production Configuration
+
+For production deployments, set environment variables in your hosting platform:
+
+### Vercel
+
+1. Go to your project in Vercel dashboard
+2. Navigate to **Settings** → **Environment Variables**
+3. Add all three variables
+4. Select environment: **Production**, **Preview**, and **Development**
+5. Click **Save**
+
+<Info>
+  Vercel automatically encrypts environment variables and only exposes them at build and runtime.
+</Info>
+
+### Other Platforms
+
+For other hosting platforms (Netlify, Railway, Render, etc.):
+- Refer to their environment variable configuration documentation
+- Ensure service role key is marked as **secret** or **encrypted**
+- Test the configuration in a staging environment first
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Never Commit Secrets" icon="lock">
+    Add `.env.local` to `.gitignore` and never commit it to version control.
+  </Card>
+  <Card title="Use Service Role Carefully" icon="shield-halved">
+    Only use `SUPABASE_SERVICE_ROLE_KEY` in server-side code for admin operations.
+  </Card>
+  <Card title="Rotate Keys Regularly" icon="rotate">
+    Periodically rotate your service role key in Supabase settings.
+  </Card>
+  <Card title="Separate Environments" icon="layer-group">
+    Use different Supabase projects for development, staging, and production.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### "Invalid API key" Error
+
+- Verify you copied the complete key without truncation
+- Check for extra spaces or line breaks in the `.env.local` file
+- Ensure variable names match exactly (case-sensitive)
+
+### Variables Not Loading
+
+- Restart your Next.js development server after changing `.env.local`
+- Check that the file is named exactly `.env.local` (not `.env` or `.env.development`)
+- Verify the file is in the project root directory
+
+### Authentication Not Working
+
+- Confirm `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are correct
+- Check Supabase dashboard for any project issues
+- Verify authentication providers are enabled in Supabase
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Production Deployment" icon="rocket" href="/deployment/production">
+    Deploy your application to production
+  </Card>
+  <Card title="Supabase Setup" icon="database" href="/deployment/supabase-setup">
+    Learn about the Supabase configuration
+  </Card>
+</CardGroup>

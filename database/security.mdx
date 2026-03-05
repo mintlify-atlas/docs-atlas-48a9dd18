@@ -1,0 +1,356 @@
+---
+title: "Row Level Security"
+description: "Database security policies and role-based access control"
+---
+
+## Overview
+
+The Procurement Calendar uses Supabase Row Level Security (RLS) to enforce fine-grained access control at the database level. All tables have RLS enabled, and policies are defined based on user roles.
+
+<Warning>
+RLS policies are enforced at the PostgreSQL level, ensuring security even if application code is compromised.
+</Warning>
+
+## Security Architecture
+
+The security model is built on three pillars:
+
+<CardGroup cols={3}>
+  <Card title="User Roles" icon="users">
+    Three distinct roles: admin, coordinadora, consulta
+  </Card>
+  <Card title="RLS Policies" icon="shield-halved">
+    Table-level policies control CRUD operations
+  </Card>
+  <Card title="Helper Functions" icon="function">
+    `get_my_role()` function for policy evaluation
+  </Card>
+</CardGroup>
+
+## User Roles
+
+Roles are defined as a PostgreSQL enum and stored in the `profiles` table.
+
+```sql
+CREATE TYPE user_role AS ENUM ('admin', 'coordinadora', 'consulta');
+```
+
+### Role Permissions Matrix
+
+| Resource | admin | coordinadora | consulta |
+|----------|-------|--------------|----------|
+| **Catalogs** | Full CRUD | Read only | Read only |
+| **Requisitions** | Full CRUD | Create, Read, Update | Read only |
+| **History** | Read, Write | Read, Write | No access |
+| **Profiles** | Full CRUD | Own profile only | Own profile only |
+
+<Info>
+The `consulta` role is designed for stakeholders who need visibility without the ability to modify data.
+</Info>
+
+## RLS Helper Function
+
+The `get_my_role()` function retrieves the current user's role for use in policy definitions.
+
+```sql
+CREATE OR REPLACE FUNCTION get_my_role()
+RETURNS user_role AS $$
+  SELECT rol FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+```
+
+<Accordion title="Function Details">
+- **Returns**: The role of the currently authenticated user
+- **Security**: `SECURITY DEFINER` allows reading from `profiles` table
+- **Performance**: `STABLE` marking allows query optimization
+- **Usage**: Called in RLS policy `USING` and `WITH CHECK` clauses
+</Accordion>
+
+## Table-Level Policies
+
+All tables have RLS enabled:
+
+```sql
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE proveedores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE presentaciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE destinos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE estatus ENABLE ROW LEVEL SECURITY;
+ALTER TABLE unidades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE requisiciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE requisiciones_historial ENABLE ROW LEVEL SECURITY;
+```
+
+## Profiles Policies
+
+Controls access to user profile data.
+
+### View Own Profile
+
+```sql
+CREATE POLICY "profiles: anyone can view own" ON profiles
+  FOR SELECT USING (id = auth.uid());
+```
+
+Allows users to view their own profile information.
+
+### Admin View All
+
+```sql
+CREATE POLICY "profiles: admin can view all" ON profiles
+  FOR SELECT USING (get_my_role() = 'admin');
+```
+
+Admins can view all user profiles for management purposes.
+
+### Update Own Profile
+
+```sql
+CREATE POLICY "profiles: user can update own" ON profiles
+  FOR UPDATE USING (id = auth.uid());
+```
+
+Users can update their own profile (e.g., name, preferences).
+
+### Admin Full Access
+
+```sql
+CREATE POLICY "profiles: admin can manage all" ON profiles
+  FOR ALL USING (get_my_role() = 'admin');
+```
+
+<Warning>
+Admins can modify user roles. Role changes take effect on the user's next request.
+</Warning>
+
+## Catalog Tables Policies
+
+Applied uniformly to: `proveedores`, `productos`, `presentaciones`, `destinos`, `estatus`, `unidades`
+
+### All Authenticated Can Read
+
+```sql
+CREATE POLICY "<table>: all authenticated can select" ON <table>
+  FOR SELECT TO authenticated USING (TRUE);
+```
+
+Any authenticated user can read catalog data for dropdowns and filters.
+
+### Admin Full Access
+
+```sql
+CREATE POLICY "<table>: admin full access" ON <table>
+  FOR ALL TO authenticated 
+  USING (get_my_role() = 'admin')
+  WITH CHECK (get_my_role() = 'admin');
+```
+
+Only admins can create, update, or delete catalog entries.
+
+<Accordion title="Dynamic Policy Creation">
+These policies are created programmatically using a PL/pgSQL loop:
+
+```sql
+DO $$
+DECLARE
+  tbl TEXT;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY['proveedores', 'productos', 'presentaciones', 'destinos', 'estatus', 'unidades'] LOOP
+    EXECUTE format('
+      CREATE POLICY "%s: all authenticated can select" ON %s
+        FOR SELECT TO authenticated USING (TRUE);', tbl, tbl);
+    EXECUTE format('
+      CREATE POLICY "%s: admin full access" ON %s
+        FOR ALL TO authenticated USING (get_my_role() = ''admin'')
+        WITH CHECK (get_my_role() = ''admin'');', tbl, tbl);
+  END LOOP;
+END;
+$$;
+```
+</Accordion>
+
+## Requisiciones Policies
+
+The main table with differentiated access by role.
+
+### SELECT: All Authenticated
+
+```sql
+CREATE POLICY "requisiciones: all authenticated can select" ON requisiciones
+  FOR SELECT TO authenticated USING (TRUE);
+```
+
+All roles can view requisitions. This enables:
+- **consulta**: Read-only dashboard access
+- **coordinadora**: View requisitions before editing
+- **admin**: Full visibility
+
+### INSERT: Admin and Coordinadora
+
+```sql
+CREATE POLICY "requisiciones: admin and coordinadora can insert" ON requisiciones
+  FOR INSERT TO authenticated
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+```
+
+<Info>
+The `WITH CHECK` clause validates the role before allowing the insert to proceed.
+</Info>
+
+### UPDATE: Admin and Coordinadora
+
+```sql
+CREATE POLICY "requisiciones: admin and coordinadora can update" ON requisiciones
+  FOR UPDATE TO authenticated
+  USING (get_my_role() IN ('admin', 'coordinadora'))
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+```
+
+<Accordion title="USING vs WITH CHECK">
+- **USING**: Determines which rows can be selected for update
+- **WITH CHECK**: Validates the new row data after update
+
+Both must pass for the update to succeed.
+</Accordion>
+
+### DELETE: Admin Only
+
+```sql
+CREATE POLICY "requisiciones: admin can delete" ON requisiciones
+  FOR DELETE TO authenticated
+  USING (get_my_role() = 'admin');
+```
+
+<Warning>
+Deleting a requisition also deletes all its history records due to `ON DELETE CASCADE`.
+</Warning>
+
+## Requisiciones Historial Policies
+
+Audit log access is restricted to prevent tampering.
+
+### SELECT: Admin and Coordinadora
+
+```sql
+CREATE POLICY "historial: admin and coordinadora can select" ON requisiciones_historial
+  FOR SELECT TO authenticated
+  USING (get_my_role() IN ('admin', 'coordinadora'));
+```
+
+History is visible to admin and coordinadora roles for audit purposes.
+
+### INSERT: System Only
+
+```sql
+CREATE POLICY "historial: system can insert" ON requisiciones_historial
+  FOR INSERT TO authenticated
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+```
+
+<Note>
+History records are created by application code when requisitions are modified. No manual editing is allowed.
+</Note>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Principle of Least Privilege" icon="lock">
+    Users are granted only the minimum permissions needed for their role
+  </Card>
+  <Card title="Defense in Depth" icon="shield">
+    Security enforced at database level, independent of application code
+  </Card>
+  <Card title="Audit Trail" icon="clock-rotate-left">
+    All requisition changes are logged in the historial table
+  </Card>
+  <Card title="Immutable History" icon="ban">
+    No UPDATE or DELETE policies on history table
+  </Card>
+</CardGroup>
+
+### Recommended Practices
+
+1. **Never bypass RLS**: Always use Supabase client with user authentication
+2. **Test role permissions**: Verify policies work as expected for each role
+3. **Monitor policy performance**: RLS policies can impact query speed on large tables
+4. **Use service_role sparingly**: The service role key bypasses RLS (use only for admin operations)
+5. **Regular audits**: Review requisiciones_historial for suspicious activity
+
+<Warning>
+The Supabase `service_role` key bypasses ALL RLS policies. Never expose it to client-side code.
+</Warning>
+
+## Testing RLS Policies
+
+You can test policies in the Supabase SQL Editor:
+
+```sql
+-- Test as a specific user
+SET request.jwt.claim.sub = '<user_uuid>';
+
+-- Query should respect RLS
+SELECT * FROM requisiciones;
+
+-- Reset
+RESET request.jwt.claim.sub;
+```
+
+<Accordion title="Testing Different Roles">
+```sql
+-- Create test users with different roles
+INSERT INTO auth.users (id, email, raw_user_meta_data)
+VALUES 
+  ('uuid-for-admin', 'admin@test.com', '{"rol": "admin"}'),
+  ('uuid-for-coord', 'coord@test.com', '{"rol": "coordinadora"}'),
+  ('uuid-for-view', 'view@test.com', '{"rol": "consulta"}');
+
+-- Profiles will be auto-created by trigger
+
+-- Test as coordinadora
+SET request.jwt.claim.sub = 'uuid-for-coord';
+INSERT INTO requisiciones (...) VALUES (...);
+-- Should succeed
+
+-- Test as consulta
+SET request.jwt.claim.sub = 'uuid-for-view';
+INSERT INTO requisiciones (...) VALUES (...);
+-- Should fail with permission error
+```
+</Accordion>
+
+## Troubleshooting
+
+### Common Issues
+
+<Accordion title="Policy not working">
+1. Verify RLS is enabled: `ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;`
+2. Check user has a profile with valid role
+3. Ensure `get_my_role()` returns expected value
+4. Review policy definitions for typos
+</Accordion>
+
+<Accordion title="Performance issues">
+1. Add indexes on columns used in policy conditions
+2. Use `STABLE` or `IMMUTABLE` function markers when possible
+3. Avoid complex subqueries in policy definitions
+4. Consider materialized views for complex access patterns
+</Accordion>
+
+<Accordion title="User can't access their own data">
+1. Check if profile exists: `SELECT * FROM profiles WHERE id = auth.uid()`
+2. Verify authentication token is valid
+3. Ensure policy uses `auth.uid()` correctly
+4. Check for policy conflicts (multiple policies with OR logic)
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Schema" icon="table" href="/database/schema">
+    Review the complete database structure
+  </Card>
+  <Card title="Data Model" icon="diagram-project" href="/database/data-model">
+    Understand entity relationships
+  </Card>
+</CardGroup>

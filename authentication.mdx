@@ -1,0 +1,497 @@
+---
+title: Authentication & Access Control
+description: Understanding authentication, roles, and permissions in Procurement Calendar
+---
+
+# Authentication & Access Control
+
+Procurement Calendar uses **Supabase Auth** for secure authentication and implements a comprehensive role-based access control (RBAC) system to ensure users only have access to features appropriate for their role.
+
+## Authentication System
+
+### Supabase Auth Integration
+
+The application leverages Supabase's built-in authentication system with Row-Level Security (RLS) policies to protect data at the database level.
+
+<Info>
+Supabase Auth handles session management, password hashing, and secure token storage automatically, ensuring enterprise-grade security.
+</Info>
+
+### Server-Side Client
+
+The application creates Supabase clients for server-side operations:
+
+```typescript lib/supabase/server.ts
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+    const cookieStore = await cookies()
+
+    return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll()
+                },
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            cookieStore.set(name, value, options)
+                        )
+                    } catch {
+                        // Ignored if called from Server Component
+                    }
+                },
+            },
+        }
+    )
+}
+```
+
+This client uses cookies to persist authentication state across requests.
+
+### Client-Side Client
+
+For browser-based operations:
+
+```typescript lib/supabase/client.ts
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+    return createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+}
+```
+
+## Authentication Flow
+
+### User Login
+
+The sign-in process is handled by a server action:
+
+```typescript lib/actions/auth.ts
+export async function signIn(formData: { email: string; password: string }) {
+    const supabase = await createClient()
+
+    const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+    })
+
+    if (error) {
+        return { error: error.message }
+    }
+
+    revalidatePath('/', 'layout')
+    redirect('/dashboard/calendar')
+}
+```
+
+**Login Flow:**
+
+1. User submits email and password
+2. Supabase validates credentials
+3. If successful, session is created and stored in cookies
+4. User is redirected to `/dashboard/calendar`
+5. If failed, error message is returned
+
+<Tip>
+The application automatically revalidates the layout after login to ensure fresh data is loaded.
+</Tip>
+
+### User Registration
+
+New users can request access through the sign-up flow:
+
+```typescript lib/actions/auth.ts
+export async function signUp(formData: { 
+    email: string; 
+    password: string; 
+    nombre_completo: string 
+}) {
+    const supabase = await createClient()
+
+    const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+            data: {
+                nombre_completo: formData.nombre_completo,
+            }
+        }
+    })
+
+    if (error) {
+        return { error: error.message }
+    }
+
+    revalidatePath('/', 'layout')
+    redirect('/dashboard/pendiente')
+}
+```
+
+**Registration Flow:**
+
+1. User fills registration form with name, email, and password
+2. Account is created in Supabase Auth
+3. A database trigger automatically creates a profile record
+4. User is redirected to `/dashboard/pendiente` (pending approval page)
+5. Administrator must approve and assign role before user can access the system
+
+<Warning>
+New accounts are created with `consulta` (view-only) role by default and have limited access until an administrator updates their role.
+</Warning>
+
+### User Profile Creation
+
+When a user signs up, a database trigger automatically creates their profile:
+
+```sql supabase/schema.sql
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, nombre_completo, rol)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'nombre_completo', NEW.email),
+    COALESCE((NEW.raw_user_meta_data->>'rol')::user_role, 'consulta')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+```
+
+This ensures every authenticated user has a corresponding profile record.
+
+### Get Current User Profile
+
+Retrieve the authenticated user's profile:
+
+```typescript lib/actions/auth.ts
+export async function getCurrentProfile() {
+    const supabase = await createClient()
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+    return profile
+}
+```
+
+This function:
+
+1. Gets the authenticated user from Supabase Auth
+2. Fetches the corresponding profile from the `profiles` table
+3. Returns the profile data including role information
+
+### Sign Out
+
+Log out the current user:
+
+```typescript lib/actions/auth.ts
+export async function signOut() {
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect('/login')
+}
+```
+
+## Role-Based Access Control
+
+### Available Roles
+
+The system defines roles as a PostgreSQL enum:
+
+```sql supabase/schema.sql
+CREATE TYPE user_role AS ENUM ('admin', 'coordinadora', 'consulta');
+```
+
+<Note>
+While the README mentions additional roles like 'laboratorio' and 'cedis', the current database schema implements three core roles. Additional roles can be added by extending the enum.
+</Note>
+
+### Role Permissions
+
+Here's a detailed breakdown of what each role can do:
+
+<CardGroup cols={3}>
+  <Card title="Admin" icon="shield-halved">
+    **Full System Access**
+    
+    - Manage all users and profiles
+    - Create, read, update, and delete requisitions
+    - Manage all catalog tables
+    - Access audit history
+    - View all system data
+  </Card>
+  
+  <Card title="Coordinadora" icon="users">
+    **Requisition Management**
+    
+    - Create new requisitions
+    - Update existing requisitions
+    - View all requisitions
+    - Read catalog data
+    - Access audit history
+    - Cannot delete requisitions
+  </Card>
+  
+  <Card title="Consulta" icon="eye">
+    **View-Only Access**
+    
+    - View requisitions
+    - View calendar
+    - Read catalog data
+    - Cannot create or modify any data
+    - Cannot access admin features
+  </Card>
+</CardGroup>
+
+## Row-Level Security (RLS)
+
+Supabase RLS policies enforce permissions at the database level, ensuring users can only access data they're authorized to see.
+
+### Helper Function
+
+A helper function retrieves the current user's role:
+
+```sql supabase/schema.sql
+CREATE OR REPLACE FUNCTION get_my_role()
+RETURNS user_role AS $$
+  SELECT rol FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+```
+
+This function is used throughout the RLS policies to check user permissions.
+
+### Profiles Table Policies
+
+```sql supabase/schema.sql
+-- Users can view their own profile
+CREATE POLICY "profiles: anyone can view own" ON profiles
+  FOR SELECT USING (id = auth.uid());
+
+-- Admins can view all profiles
+CREATE POLICY "profiles: admin can view all" ON profiles
+  FOR SELECT USING (get_my_role() = 'admin');
+
+-- Users can update their own profile
+CREATE POLICY "profiles: user can update own" ON profiles
+  FOR UPDATE USING (id = auth.uid());
+
+-- Admins can manage all profiles
+CREATE POLICY "profiles: admin can manage all" ON profiles
+  FOR ALL USING (get_my_role() = 'admin');
+```
+
+### Catalog Tables Policies
+
+All catalog tables (`proveedores`, `productos`, `presentaciones`, `destinos`, `estatus`, `unidades`) share the same policies:
+
+```sql supabase/schema.sql
+-- All authenticated users can read catalogs
+CREATE POLICY "catalogs: all authenticated can select" ON [table]
+  FOR SELECT TO authenticated USING (TRUE);
+
+-- Only admins can modify catalogs
+CREATE POLICY "catalogs: admin full access" ON [table]
+  FOR ALL TO authenticated 
+  USING (get_my_role() = 'admin')
+  WITH CHECK (get_my_role() = 'admin');
+```
+
+### Requisiciones Table Policies
+
+```sql supabase/schema.sql
+-- All authenticated users can view requisitions
+CREATE POLICY "requisiciones: all authenticated can select" ON requisiciones
+  FOR SELECT TO authenticated USING (TRUE);
+
+-- Admin and coordinadora can create requisitions
+CREATE POLICY "requisiciones: admin and coordinadora can insert" ON requisiciones
+  FOR INSERT TO authenticated
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+
+-- Admin and coordinadora can update requisitions
+CREATE POLICY "requisiciones: admin and coordinadora can update" ON requisiciones
+  FOR UPDATE TO authenticated
+  USING (get_my_role() IN ('admin', 'coordinadora'))
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+
+-- Only admin can delete requisitions
+CREATE POLICY "requisiciones: admin can delete" ON requisiciones
+  FOR DELETE TO authenticated
+  USING (get_my_role() = 'admin');
+```
+
+**Permission Summary for Requisitions:**
+
+| Operation | Admin | Coordinadora | Consulta |
+|-----------|-------|--------------|----------|
+| SELECT (View) | ✅ | ✅ | ✅ |
+| INSERT (Create) | ✅ | ✅ | ❌ |
+| UPDATE (Edit) | ✅ | ✅ | ❌ |
+| DELETE (Remove) | ✅ | ❌ | ❌ |
+
+### Audit History Policies
+
+```sql supabase/schema.sql
+-- Admin and coordinadora can view history
+CREATE POLICY "historial: admin and coordinadora can select" ON requisiciones_historial
+  FOR SELECT TO authenticated
+  USING (get_my_role() IN ('admin', 'coordinadora'));
+
+-- System can insert audit records
+CREATE POLICY "historial: system can insert" ON requisiciones_historial
+  FOR INSERT TO authenticated
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+```
+
+## Route Protection
+
+The dashboard layout implements route guards to prevent unauthorized access:
+
+```typescript app/dashboard/layout.tsx
+const PROTECTED_ROUTES = [
+    '/dashboard/requisiciones',
+    '/dashboard/catalogos',
+    '/dashboard/admin',
+]
+
+useEffect(() => {
+    if (loading) return
+
+    // Pending users: redirect to waiting screen
+    if (isPendiente && pathname !== '/dashboard/pendiente') {
+        router.replace('/dashboard/pendiente')
+        return
+    }
+
+    // View-only roles: block access to protected routes
+    if (canViewOnly) {
+        const isBlocked = PROTECTED_ROUTES.some(r => pathname.startsWith(r))
+        if (isBlocked) {
+            router.replace('/dashboard/calendar')
+        }
+    }
+}, [role, loading, pathname, canViewOnly, isPendiente, router])
+```
+
+**Route Protection Rules:**
+
+1. Pending users are restricted to `/dashboard/pendiente`
+2. View-only users (consulta) cannot access protected routes
+3. Protected routes require admin or coordinadora role
+4. Unauthorized access attempts redirect to `/dashboard/calendar`
+
+## Security Best Practices
+
+<Warning>
+Always validate permissions on both the client and server side. Client-side checks improve UX, but server-side validation is critical for security.
+</Warning>
+
+### Environment Variables
+
+- Store Supabase credentials in `.env.local`
+- Never commit sensitive credentials to version control
+- Use `NEXT_PUBLIC_` prefix only for variables that need to be exposed to the browser
+
+### Session Management
+
+- Supabase automatically handles session refresh
+- Sessions are stored securely in HTTP-only cookies
+- Expired sessions trigger automatic re-authentication
+
+### Password Requirements
+
+From the validation schema:
+
+- Minimum 6 characters
+- Passwords are hashed by Supabase Auth (bcrypt)
+- Password confirmation required during registration
+
+### API Security
+
+- All API routes check authentication status
+- RLS policies enforce database-level security
+- Anonymous key (`ANON_KEY`) has limited permissions
+- Service role key should never be exposed to the client
+
+## Common Authentication Patterns
+
+### Check if User is Authenticated
+
+```typescript
+const supabase = await createClient()
+const { data: { user } } = await supabase.auth.getUser()
+
+if (!user) {
+  redirect('/login')
+}
+```
+
+### Check User Role
+
+```typescript
+const profile = await getCurrentProfile()
+
+if (profile?.rol !== 'admin') {
+  return { error: 'Unauthorized' }
+}
+```
+
+### Protect Server Actions
+
+```typescript
+export async function deleteRequisicion(id: string) {
+    const profile = await getCurrentProfile()
+    
+    if (profile?.rol !== 'admin') {
+        return { error: 'Only admins can delete requisitions' }
+    }
+    
+    // Proceed with deletion
+}
+```
+
+## Troubleshooting
+
+### Session Not Persisting
+
+- Ensure cookies are enabled in the browser
+- Check that `NEXT_PUBLIC_SUPABASE_URL` is correctly set
+- Verify Supabase project is active
+
+### Unauthorized Errors
+
+- Check that RLS policies are properly configured
+- Verify user role in the `profiles` table
+- Ensure user is authenticated (check `auth.users` table)
+
+### Permission Denied
+
+- Confirm the user has the correct role for the operation
+- Check RLS policies in Supabase dashboard
+- Verify `get_my_role()` function returns the correct role
+
+---
+
+The authentication and access control system provides enterprise-grade security while maintaining a smooth user experience. All permissions are enforced at multiple layers for defense in depth.

@@ -1,0 +1,416 @@
+---
+title: 'Requisition Management'
+description: 'Track and manage procurement requisitions from request to delivery'
+icon: 'clipboard-list'
+---
+
+## Overview
+
+The requisition management system is the core feature of the Procurement Calendar application. It provides a comprehensive workflow for tracking procurement orders from initial request through delivery and receipt. Each requisition captures detailed information about products, suppliers, delivery schedules, and order status.
+
+## Requisition Lifecycle
+
+Requisitions flow through multiple states during their lifecycle:
+
+<Steps>
+  <Step title="Pending">
+    Initial state when a requisition is created. The order has been placed but not yet confirmed by the supplier.
+  </Step>
+  
+  <Step title="Confirmed">
+    Supplier has confirmed the order and committed to a delivery date. The `fecha_confirmada` field is populated.
+  </Step>
+  
+  <Step title="In Transit">
+    Order has been shipped and is en route to the destination. Tracking information may be available.
+  </Step>
+  
+  <Step title="Received">
+    Products have been delivered and received at the destination. Delivery date and quantity received are recorded.
+  </Step>
+</Steps>
+
+<Note>
+Status transitions are managed through the `estatus` catalog, which includes color-coded badges for visual identification:
+- **Pendiente** (Orange `#F59E0B`)
+- **Confirmado** (Blue `#3B82F6`)
+- **En Tránsito** (Purple `#8B5CF6`)
+- **Recibido** (Green `#10B981`)
+- **Cancelado** (Red `#EF4444`)
+- **En Revisión** (Orange `#F97316`)
+</Note>
+
+## Data Structure
+
+Each requisition contains the following core fields:
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `fecha_recepcion` | Date | Date the requisition was received/created |
+| `proveedor_id` | UUID | Reference to supplier from catalog |
+| `producto_id` | UUID | Reference to product from catalog |
+| `presentacion_id` | UUID | Product presentation (e.g., "Tambor 200 L", "Saco 25 kg") |
+| `destino_id` | UUID | Delivery destination/location |
+| `estatus_id` | UUID | Current status of the requisition |
+| `cantidad_solicitada` | Numeric | Quantity ordered (must be > 0) |
+| `unidad_cantidad_id` | UUID | Unit of measure (kg, L, pzs, etc.) |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `numero_oc` | Text | Purchase order number (e.g., "GG-01000") |
+| `requisicion_numero` | Text | Internal requisition number (e.g., "F0000") |
+| `fecha_oc` | Date | Date purchase order was issued |
+| `fecha_solicitada_entrega` | Date | Requested delivery date |
+| `fecha_confirmada` | Date | Confirmed delivery date from supplier |
+| `fecha_entregado` | Date | Actual delivery date |
+| `cantidad_entregada` | Numeric | Actual quantity delivered |
+| `factura_remision` | Text | Invoice or delivery note number |
+| `comentarios` | Text | Additional notes or instructions |
+
+<Info>
+The requisition structure is defined in `types/index.ts:54-83` and enforced at the database level with foreign key constraints and check constraints.
+</Info>
+
+## Creating Requisitions
+
+Only users with **admin** or **coordinadora** roles can create requisitions.
+
+### Using the Form Modal
+
+The `RequisicionFormModal` component provides a comprehensive form with three sections:
+
+**Section 1: Requisition Data**
+```tsx
+// Manual input fields
+- № REQUI (requisicion_numero)
+- FECHA DE OC (fecha_oc)
+- FOLIO OC (numero_oc)
+- FECHA SOLICITADA (fecha_solicitada_entrega)
+- FECHA CONFIRMADA (fecha_confirmada) // Admin/Coordinadora only
+- FACTURA / REMISIÓN (factura_remision)
+```
+
+**Section 2: Material Details**
+```tsx
+// Catalog selections with quick-add buttons
+- Proveedor (required)
+- Producto (required)
+- Presentación (required)
+- Destino (required)
+- Estatus (required)
+- Cantidad y Unidad (required)
+```
+
+**Section 3: Delivery Information**
+```tsx
+// Closure fields
+- Fecha Entregado (fecha_entregado)
+- Cantidad Entregada (cantidad_entregada)
+```
+
+### Server Action
+
+```typescript
+import { createRequisicion } from '@/lib/actions/requisiciones'
+
+const result = await createRequisicion({
+  fecha_recepcion: '2024-03-15',
+  proveedor_id: 'uuid-here',
+  producto_id: 'uuid-here',
+  presentacion_id: 'uuid-here',
+  destino_id: 'uuid-here',
+  estatus_id: 'uuid-here',
+  cantidad_solicitada: 500,
+  unidad_cantidad_id: 'uuid-here',
+  numero_oc: 'GG-01234',
+  comentarios: 'Entrega urgente'
+})
+
+if (result.error) {
+  console.error('Error:', result.error)
+} else {
+  console.log('Created:', result.data)
+}
+```
+
+<Warning>
+The `createRequisicion` action automatically:
+- Validates user permissions (admin or coordinadora only)
+- Sets `created_by` to the current user ID
+- Validates all required fields and foreign key references
+- Revalidates calendar and requisitions pages
+</Warning>
+
+## Editing Requisitions
+
+Requisitions can be edited by admin and coordinadora users. The system automatically tracks all changes in an audit trail.
+
+### Update with Audit Trail
+
+```typescript
+import { updateRequisicion } from '@/lib/actions/requisiciones'
+
+// Track which fields were modified
+const modifications = [
+  {
+    campo: 'Fecha Confirmada',
+    anterior: '2024-03-15',
+    nuevo: '2024-03-18'
+  },
+  {
+    campo: 'Estatus',
+    anterior: 'Pendiente',
+    nuevo: 'Confirmado'
+  }
+]
+
+const result = await updateRequisicion(
+  requisitionId,
+  {
+    fecha_confirmada: '2024-03-18',
+    estatus_id: 'confirmed-status-uuid'
+  },
+  modifications
+)
+```
+
+The audit trail is stored in the `requisiciones_historial` table:
+
+```typescript
+interface RequisicionHistorial {
+  id: string
+  requisicion_id: string
+  campo_modificado: string      // Field name that changed
+  valor_anterior: string | null  // Previous value
+  valor_nuevo: string | null     // New value
+  usuario_id: string            // User who made the change
+  created_at: string            // When the change occurred
+}
+```
+
+<Tip>
+The form automatically compares initial and current values to build the modification list, so you only need to submit the changed data.
+</Tip>
+
+## Deleting Requisitions
+
+Only **admin** users can delete requisitions. Deletion is permanent and cascades to the audit trail.
+
+```typescript
+import { deleteRequisicion } from '@/lib/actions/requisiciones'
+
+const result = await deleteRequisicion(requisitionId)
+
+if (result.error) {
+  console.error('Delete failed:', result.error)
+} else {
+  console.log('Successfully deleted')
+}
+```
+
+<Warning>
+Deletion checks:
+- User must have `admin` role
+- Related history records are automatically deleted (CASCADE)
+- Returns error if requisition doesn't exist or user lacks permission
+</Warning>
+
+## Querying Requisitions
+
+Retrieve requisitions with optional filtering:
+
+```typescript
+import { getRequisiciones } from '@/lib/actions/requisiciones'
+
+// Get all requisitions with related data
+const { data, error } = await getRequisiciones()
+
+// Filter by supplier
+const { data } = await getRequisiciones({
+  proveedor_id: 'supplier-uuid'
+})
+
+// Filter by date range and status
+const { data } = await getRequisiciones({
+  fecha_desde: '2024-03-01',
+  fecha_hasta: '2024-03-31',
+  estatus_id: 'confirmed-status-uuid'
+})
+
+// Filter by destination
+const { data } = await getRequisiciones({
+  destino_id: 'warehouse-uuid'
+})
+```
+
+### Available Filters
+
+```typescript
+interface RequisicionFilters {
+  proveedor_id?: string    // Filter by supplier
+  destino_id?: string      // Filter by destination
+  estatus_id?: string      // Filter by status
+  fecha_desde?: string     // Start date (YYYY-MM-DD)
+  fecha_hasta?: string     // End date (YYYY-MM-DD)
+  search?: string          // Text search (future feature)
+}
+```
+
+### Joined Relations
+
+All queries automatically join related catalog data:
+
+```typescript
+// Response includes full catalog details
+interface Requisicion {
+  id: string
+  // ... all requisition fields
+  proveedor?: { id: string, nombre: string }
+  producto?: { id: string, nombre: string }
+  presentacion?: { id: string, nombre: string }
+  destino?: { id: string, nombre: string }
+  estatus?: { id: string, nombre: string, color_hex: string }
+  unidad_cantidad?: { id: string, nombre: string, abreviatura: string }
+}
+```
+
+## Search and Filter UI
+
+The `FilterBar` component provides a user-friendly interface for filtering requisitions:
+
+```tsx
+import { FilterBar } from '@/components/forms/FilterBar'
+import { useState } from 'react'
+
+function RequisitionsPage() {
+  const [filters, setFilters] = useState<RequisicionFilters>({})
+  
+  return (
+    <div>
+      <FilterBar 
+        filters={filters} 
+        onFilterChange={setFilters} 
+      />
+      {/* Requisitions table or list */}
+    </div>
+  )
+}
+```
+
+Features:
+- Multi-select filtering by supplier, destination, and status
+- Date range selection
+- Clear all filters button
+- Real-time updates
+
+## Table View
+
+The requisitions table displays comprehensive information with sorting and actions:
+
+**Key Features:**
+- Automatically sorts received items to bottom
+- Color-coded status badges
+- Calculated pending quantity (cantidad_solicitada - cantidad_entregada)
+- View and edit actions based on user role
+- Responsive design with horizontal scroll
+
+**Displayed Columns:**
+1. № Requi (requisition number)
+2. Fecha Rec. (reception date)
+3. FOLIO OC (purchase order number)
+4. Proveedor (supplier)
+5. Producto (product with quantity and presentation)
+6. Fecha Sol. (requested date)
+7. Fecha Conf. (confirmed date)
+8. Cant. Ent. (delivered quantity)
+9. F. Entrega (delivery date)
+10. Cant. Pend. (pending quantity)
+11. Estatus (status badge)
+12. Destino (destination)
+13. Acciones (view/edit buttons)
+
+<CardGroup cols={2}>
+  <Card title="View Details" icon="eye">
+    All users can view requisition details including full history and comments
+  </Card>
+  
+  <Card title="Edit" icon="pencil">
+    Admin and coordinadora roles can edit existing requisitions
+  </Card>
+</CardGroup>
+
+## View Audit History
+
+Retrieve the change history for a requisition:
+
+```typescript
+import { getHistorial } from '@/lib/actions/requisiciones'
+
+// Get history for specific requisition
+const { data, error } = await getHistorial(requisicionId)
+
+// Get all changes across all requisitions
+const { data } = await getHistorial()
+```
+
+History records include:
+- Field that was modified
+- Previous and new values
+- User who made the change
+- Timestamp of the change
+- User profile information (nombre_completo, rol)
+
+## Permission Summary
+
+<CardGroup cols={3}>
+  <Card title="Admin" icon="shield-check">
+    - Create requisitions
+    - Edit all fields
+    - Delete requisitions
+    - View all history
+  </Card>
+  
+  <Card title="Coordinadora" icon="user-check">
+    - Create requisitions
+    - Edit all fields
+    - View history
+    - Cannot delete
+  </Card>
+  
+  <Card title="Consulta" icon="eye">
+    - View requisitions
+    - Read-only access
+    - No modifications
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Accordion title="When to use each date field">
+- **fecha_recepcion**: When the order request was received internally
+- **fecha_oc**: When the official purchase order was issued
+- **fecha_solicitada_entrega**: When you want delivery to occur
+- **fecha_confirmada**: When the supplier confirms they can deliver
+- **fecha_entregado**: When the products actually arrived
+</Accordion>
+
+<Accordion title="Managing partial deliveries">
+When a supplier delivers less than requested:
+1. Update `cantidad_entregada` with actual amount received
+2. Set `fecha_entregado` to actual delivery date
+3. The table automatically calculates and displays pending quantity
+4. Optionally create a new requisition for the remaining amount
+</Accordion>
+
+<Accordion title="Status workflow recommendations">
+1. Start with **Pendiente** when creating requisition
+2. Move to **Confirmado** once supplier confirms (set fecha_confirmada)
+3. Update to **En Tránsito** when supplier ships
+4. Change to **Recibido** when delivered (set fecha_entregado)
+5. Use **En Revisión** if there are quality or documentation issues
+6. Use **Cancelado** if order is cancelled before delivery
+</Accordion>

@@ -1,0 +1,405 @@
+---
+title: "Laboratory Workflow"
+description: "Workflow guide for laboratory team members monitoring scheduled material arrivals for quality control"
+---
+
+The **Laboratorio** (Laboratory) role provides view-only access to the procurement calendar, allowing quality control team members to prepare for incoming material testing.
+
+## Laboratory Responsibilities
+
+<CardGroup cols={2}>
+  <Card title="Monitor Deliveries" icon="calendar-search">
+    Track scheduled arrivals of materials requiring quality testing
+  </Card>
+  <Card title="Plan Testing" icon="flask">
+    Prepare testing schedules based on confirmed delivery dates
+  </Card>
+  <Card title="Coordinate with Coordinators" icon="users">
+    Communicate quality requirements for incoming materials
+  </Card>
+  <Card title="Review Material Details" icon="clipboard-list">
+    Access product specifications and delivery information
+  </Card>
+</CardGroup>
+
+## Permissions Overview
+
+Laboratory users have **read-only** access:
+
+- ✅ **View** calendar with all scheduled deliveries
+- ✅ **View** requisition details (product, supplier, quantities, dates)
+- ✅ **View** all catalog data (products, suppliers, etc.)
+- ❌ Cannot create or edit requisitions
+- ❌ Cannot modify catalog entries
+- ❌ Cannot delete any data
+- ❌ Cannot access admin or configuration settings
+
+<Info>
+  Laboratory team members can only see information - they cannot make changes. For updates, contact a coordinator or admin.
+</Info>
+
+## Daily Workflow
+
+### Morning Planning Routine
+
+<Steps>
+  <Step title="Open Calendar">
+    Navigate to **Dashboard > Calendario** to see all scheduled deliveries
+  </Step>
+  
+  <Step title="Review Today's Arrivals">
+    Check all requisitions scheduled for today. Look for:
+    - **Confirmado** (blue) - Confirmed deliveries that may arrive
+    - **En Tránsito** (purple) - Materials currently being shipped
+    - **Recibido** (green) - Materials that have arrived at CEDIS
+  </Step>
+  
+  <Step title="Check This Week">
+    Switch to **Week View** to see all deliveries for the next 5-7 days
+  </Step>
+  
+  <Step title="Identify Testing Requirements">
+    Click on each relevant delivery to review:
+    - Product name and description
+    - Supplier information
+    - Quantity and presentation
+    - Any special comments or requirements
+  </Step>
+  
+  <Step title="Prepare Lab Schedule">
+    Plan testing capacity based on expected arrivals and testing complexity
+  </Step>
+</Steps>
+
+## Using the Calendar View
+
+### Understanding Status Colors
+
+The calendar uses color-coding to show delivery status at a glance:
+
+- 🟡 **Pendiente** (Amber) - Awaiting supplier confirmation (may change)
+- 🔵 **Confirmado** (Blue) - Confirmed by supplier (reliable date)
+- 🟠 **En Revisión** (Orange) - Under review (possible issues)
+- 🟣 **En Tránsito** (Purple) - Shipment in transit (arriving soon)
+- 🟢 **Recibido** (Green) - Delivered to warehouse (ready for testing)
+- 🔴 **Cancelado** (Red) - Order cancelled
+
+<Tip>
+  Focus on **Confirmado** (blue) and **En Tránsito** (purple) statuses for your testing schedule - these are most likely to arrive as planned.
+</Tip>
+
+### Viewing Delivery Details
+
+<Steps>
+  <Step title="Click Event">
+    Click on any colored event block in the calendar
+  </Step>
+  
+  <Step title="Review Information">
+    The detail modal shows:
+    - **Product**: Material name (e.g., "Sosa Cáustica", "LABSA")
+    - **Supplier**: Company providing the material
+    - **Date**: Confirmed delivery date
+    - **Quantity**: Amount and unit (e.g., 500 kg, 200 L)
+    - **Presentation**: Package type (drum, bag, bulk, etc.)
+    - **Destination**: Delivery location
+    - **Status**: Current order status
+    - **Purchase Order**: Reference number if available
+    - **Comments**: Special instructions or notes
+  </Step>
+  
+  <Step title="Note Testing Requirements">
+    Review comments section for any specific quality control requirements mentioned by the coordinator
+  </Step>
+  
+  <Step title="Close Modal">
+    Click **Cerrar** to return to calendar view
+  </Step>
+</Steps>
+
+<Note>
+  You will not see **Editar** (Edit) or **Delete** buttons in the detail modal - these are only available to coordinators and admins.
+</Note>
+
+## Weekly Planning
+
+### Monday Morning Review
+
+<Steps>
+  <Step title="Switch to Week View">
+    Click **Semana** in the calendar controls to see the weekly schedule
+  </Step>
+  
+  <Step title="List This Week's Arrivals">
+    Create a list of all materials scheduled for delivery this week
+  </Step>
+  
+  <Step title="Categorize by Priority">
+    Identify which materials are:
+    - Critical for production (test immediately)
+    - Standard materials (regular testing schedule)
+    - New suppliers (may require additional validation)
+  </Step>
+  
+  <Step title="Check Testing Capacity">
+    Ensure lab has capacity and reagents needed for expected tests
+  </Step>
+  
+  <Step title="Coordinate with Team">
+    Assign testing responsibilities to lab team members
+  </Step>
+</Steps>
+
+### Daily Check-In
+
+<Steps>
+  <Step title="Morning Review (9 AM)">
+    Check calendar for today's expected arrivals and confirm lab is ready
+  </Step>
+  
+  <Step title="Midday Update (1 PM)">
+    Review if any statuses changed to "Recibido" (green) - materials arrived at warehouse
+  </Step>
+  
+  <Step title="End of Day (5 PM)">
+    Check tomorrow's schedule and prepare for next day's arrivals
+  </Step>
+</Steps>
+
+## Coordinating with Other Teams
+
+### Working with Coordinators
+
+When you need information or have concerns:
+
+<Steps>
+  <Step title="Identify the Issue">
+    Note the specific requisition (product, supplier, date) you have questions about
+  </Step>
+  
+  <Step title="Contact Coordinator">
+    Reach out to the procurement coordinator via email or phone with:
+    - Product and supplier name
+    - Scheduled delivery date
+    - Your specific question or concern
+  </Step>
+  
+  <Step title="Request Calendar Update">
+    Ask coordinator to add special testing requirements in the **Comentarios** field
+  </Step>
+</Steps>
+
+### Working with CEDIS
+
+<Steps>
+  <Step title="Share Testing Schedule">
+    Inform warehouse team which deliveries require immediate testing upon arrival
+  </Step>
+  
+  <Step title="Request Sample Notification">
+    Ask CEDIS to notify lab when materials marked for testing arrive
+  </Step>
+  
+  <Step title="Coordinate Sample Collection">
+    Arrange timing for collecting samples from warehouse to lab
+  </Step>
+</Steps>
+
+## Common Use Cases
+
+### Planning for New Supplier Materials
+
+When you see a delivery from an unfamiliar supplier:
+
+<Steps>
+  <Step title="Check Supplier Name">
+    Open the requisition details to see the supplier name
+  </Step>
+  
+  <Step title="Review Product Specs">
+    Note the product, quantity, and presentation details
+  </Step>
+  
+  <Step title="Prepare Enhanced Testing">
+    Plan for more comprehensive testing protocol for first-time suppliers
+  </Step>
+  
+  <Step title="Allocate Extra Time">
+    Schedule additional time for potential re-testing or validation
+  </Step>
+  
+  <Step title="Contact Coordinator">
+    Ask if there are any special quality requirements or certifications needed
+  </Step>
+</Steps>
+
+### Managing High-Volume Weeks
+
+When the calendar shows multiple deliveries on the same days:
+
+<Steps>
+  <Step title="Identify Clusters">
+    Note which days have 3+ deliveries scheduled
+  </Step>
+  
+  <Step title="Prioritize Testing">
+    Determine which materials are most critical for production
+  </Step>
+  
+  <Step title="Request Coordination">
+    Contact coordinator to see if any deliveries can be rescheduled
+  </Step>
+  
+  <Step title="Prepare Resources">
+    Ensure adequate staff, equipment, and reagents are available
+  </Step>
+  
+  <Step title="Set Expectations">
+    Communicate testing turnaround times to production team
+  </Step>
+</Steps>
+
+### Tracking Delayed Deliveries
+
+If you prepared for a delivery that didn't arrive:
+
+<Steps>
+  <Step title="Check Calendar Update">
+    Refresh the calendar to see if the delivery date was changed
+  </Step>
+  
+  <Step title="Look for Status Change">
+    Check if status changed from "Confirmado" to "Pendiente" or "En Revisión"
+  </Step>
+  
+  <Step title="Contact Coordinator">
+    If calendar doesn't show an update, reach out for current status
+  </Step>
+  
+  <Step title="Adjust Schedule">
+    Re-plan your testing schedule based on new information
+  </Step>
+</Steps>
+
+## Calendar Navigation Tips
+
+### Month View
+
+- **Best for**: Long-term planning and identifying busy periods
+- **Shows**: All deliveries across the entire month
+- **Use when**: Planning monthly testing capacity and resource allocation
+
+### Week View
+
+- **Best for**: Daily planning and immediate priorities
+- **Shows**: Detailed view of 7 days with more space per event
+- **Use when**: Creating daily testing schedules
+
+### Navigation Controls
+
+<CardGroup cols={2}>
+  <Card title="Today Button" icon="calendar-days">
+    Quickly jump back to current date from any view
+  </Card>
+  
+  <Card title="Prev/Next Arrows" icon="arrows-left-right">
+    Move backward or forward in time
+  </Card>
+  
+  <Card title="Month/Week Toggle" icon="toggle-right">
+    Switch between different calendar views
+  </Card>
+  
+  <Card title="Event Hover" icon="mouse-pointer">
+    Hover over events to see quick summary without clicking
+  </Card>
+</CardGroup>
+
+## Mobile Access
+
+The calendar is fully responsive and can be accessed from tablets or phones:
+
+- **Touch-Friendly**: Tap events to view details
+- **Swipe Navigation**: Swipe left/right to change months or weeks
+- **Zoom**: Pinch to zoom on crowded calendar days
+- **Offline**: Calendar data is cached for limited offline viewing
+
+<Tip>
+  Use your phone to check the calendar when you're in the lab or warehouse, away from your desk.
+</Tip>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check Calendar Daily" icon="calendar-check">
+    Review at least twice per day (morning and mid-afternoon) to catch any updates
+  </Card>
+  
+  <Card title="Plan 3 Days Ahead" icon="calendar-plus">
+    Always look 3 days forward to prepare for upcoming tests
+  </Card>
+  
+  <Card title="Focus on Confirmed Status" icon="check-circle">
+    Prioritize "Confirmado" (blue) events - these dates are most reliable
+  </Card>
+  
+  <Card title="Communicate Early" icon="message-circle">
+    Contact coordinators early if you see potential capacity issues
+  </Card>
+</CardGroup>
+
+## Reporting Issues
+
+If you notice any problems with calendar data:
+
+<Steps>
+  <Step title="Document the Issue">
+    Note what appears incorrect (wrong date, missing information, etc.)
+  </Step>
+  
+  <Step title="Contact Coordinator">
+    Reach out to procurement coordinator with specific details
+  </Step>
+  
+  <Step title="Provide Context">
+    Explain how the issue affects your testing schedule
+  </Step>
+  
+  <Step title="Suggest Solution">
+    If applicable, recommend what information should be corrected
+  </Step>
+</Steps>
+
+<Warning>
+  Do not rely solely on the calendar for critical testing schedules. Always maintain direct communication with CEDIS and coordinators for high-priority materials.
+</Warning>
+
+## Frequently Asked Questions
+
+**Q: Why can't I edit any information?**
+
+A: Laboratory role has view-only access by design. Contact a coordinator or admin to make changes.
+
+**Q: How do I request additional information in the comments field?**
+
+A: Contact the procurement coordinator and ask them to update the requisition with specific testing requirements.
+
+**Q: What if the calendar shows a delivery but nothing arrives?**
+
+A: Deliveries can be delayed or rescheduled. Contact the coordinator for current status - they may not have updated the system yet.
+
+**Q: Can I export the calendar for my own planning?**
+
+A: Currently, direct export is not available to view-only roles. Contact an admin if you need data exports for reporting.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CEDIS Workflow" icon="warehouse" href="/guides/cedis-workflow">
+    Learn how warehouse team tracks actual deliveries
+  </Card>
+  
+  <Card title="Coordinator Workflow" icon="user-check" href="/guides/coordinator-workflow">
+    Understand how coordinators manage requisitions
+  </Card>
+</CardGroup>

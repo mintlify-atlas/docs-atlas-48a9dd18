@@ -1,0 +1,612 @@
+---
+title: "CEDIS Workflow"
+description: "Workflow guide for warehouse team members managing physical delivery receipts and inventory"
+---
+
+The **CEDIS** (warehouse) role provides view-only access to the procurement calendar, enabling the receiving team to prepare for incoming deliveries and coordinate with other departments.
+
+## CEDIS Responsibilities
+
+<CardGroup cols={2}>
+  <Card title="Monitor Arrivals" icon="truck">
+    Track all scheduled deliveries to prepare receiving dock and storage
+  </Card>
+  <Card title="Physical Receiving" icon="clipboard-check">
+    Receive materials, verify quantities, and process documentation
+  </Card>
+  <Card title="Coordinate with Lab" icon="flask">
+    Alert laboratory team when materials requiring testing arrive
+  </Card>
+  <Card title="Update Coordinators" icon="phone">
+    Notify coordinators of discrepancies, delays, or early arrivals
+  </Card>
+</CardGroup>
+
+## Permissions Overview
+
+CEDIS users have **read-only** access:
+
+- ✅ **View** calendar with all scheduled deliveries
+- ✅ **View** requisition details (supplier, product, quantities, dates)
+- ✅ **View** delivery destinations and special instructions
+- ✅ **View** all catalog data
+- ❌ Cannot create or edit requisitions
+- ❌ Cannot update delivery confirmation dates or status
+- ❌ Cannot modify catalog entries
+- ❌ Cannot delete any data
+- ❌ Cannot access admin or configuration settings
+
+<Info>
+  CEDIS team members can only view information. For system updates after deliveries are received, contact a coordinator or admin.
+</Info>
+
+<Note>
+  While CEDIS cannot directly update the system, coordinators rely on your reports to update actual delivery dates and received quantities.
+</Note>
+
+## Daily Workflow
+
+### Morning Receiving Preparation
+
+<Steps>
+  <Step title="Open Calendar">
+    Navigate to **Dashboard > Calendario** to see today's scheduled deliveries
+  </Step>
+  
+  <Step title="Review Today's Schedule">
+    Check all requisitions scheduled for today, focusing on:
+    - **Confirmado** (blue) - Confirmed deliveries most likely to arrive
+    - **En Tránsito** (purple) - Shipments already on the way
+  </Step>
+  
+  <Step title="Note Delivery Details">
+    For each expected delivery, review:
+    - Product name and description
+    - Supplier name
+    - Expected quantity and unit
+    - Presentation (drums, bags, pallets, etc.)
+    - Destination location
+    - Special handling instructions in comments
+  </Step>
+  
+  <Step title="Prepare Receiving Area">
+    Clear dock space and staging areas based on:
+    - Number of deliveries expected
+    - Size and type of materials (bulk, palletized, etc.)
+    - Storage destinations
+  </Step>
+  
+  <Step title="Check Special Requirements">
+    Review comments for any materials requiring:
+    - Laboratory testing (notify lab team)
+    - Temperature control or special storage
+    - Immediate delivery to production
+    - Quality inspection on arrival
+  </Step>
+</Steps>
+
+### Receiving Process
+
+When a delivery arrives:
+
+<Steps>
+  <Step title="Locate in Calendar">
+    Check calendar to confirm this delivery was scheduled
+  </Step>
+  
+  <Step title="Review Requisition Details">
+    Click the event to see:
+    - Expected quantity
+    - Presentation type
+    - Purchase order number
+    - Destination location
+  </Step>
+  
+  <Step title="Verify Physical Delivery">
+    Check actual delivery against expected:
+    - Quantity matches requisition
+    - Presentation/packaging is correct
+    - Product appears in good condition
+    - All required documentation present (invoices, COAs, etc.)
+  </Step>
+  
+  <Step title="Process Documentation">
+    Record receipt in your warehouse management system with:
+    - Actual delivery date and time
+    - Actual quantity received
+    - Any discrepancies or damage
+  </Step>
+  
+  <Step title="Notify Coordinator">
+    Report receipt to procurement coordinator, especially if:
+    - Quantity differs from requisition
+    - Delivery arrived on different date than scheduled
+    - Product or packaging has issues
+    - Documentation is incomplete
+  </Step>
+  
+  <Step title="Alert Lab Team">
+    If comments indicate testing required, notify laboratory immediately
+  </Step>
+  
+  <Step title="Move to Destination">
+    Deliver material to final destination shown in requisition:
+    - Almacén General
+    - Línea de Producción 1/2
+    - Laboratorio de Calidad
+    - Almacén Materia Prima
+    - Planta Amozoc/Apizaco
+  </Step>
+</Steps>
+
+## Using the Calendar View
+
+### Understanding Status Colors
+
+Pay attention to status colors when planning your receiving schedule:
+
+- 🟡 **Pendiente** (Amber) - Not confirmed yet, may not arrive today
+- 🔵 **Confirmado** (Blue) - Confirmed by supplier, expect delivery
+- 🟠 **En Revisión** (Orange) - Under review, possible issues
+- 🟣 **En Tránsito** (Purple) - In transit, high likelihood of arrival
+- 🟢 **Recibido** (Green) - Already received (coordinator marked as delivered)
+- 🔴 **Cancelado** (Red) - Cancelled, will not arrive
+
+<Tip>
+  Focus your preparation on **Confirmado** (blue) and **En Tránsito** (purple) statuses - these are most likely to arrive as scheduled.
+</Tip>
+
+### Viewing Delivery Details
+
+<Steps>
+  <Step title="Click Calendar Event">
+    Click on any colored block in the calendar
+  </Step>
+  
+  <Step title="Review Modal Information">
+    The detail modal displays:
+    - **Product**: Material being delivered
+    - **Supplier**: Company making delivery
+    - **Date**: Expected/confirmed delivery date
+    - **Quantity**: Amount and unit of measure
+    - **Presentation**: Package type (drum, bag, bulk, pallet)
+    - **Destination**: Where to deliver after receiving
+    - **Order Number**: Purchase order reference
+    - **Comments**: Special instructions or handling requirements
+  </Step>
+  
+  <Step title="Note Special Instructions">
+    Pay close attention to comments field for:
+    - Quality control requirements
+    - Rush/priority deliveries
+    - Specific storage requirements
+    - Handling precautions
+  </Step>
+  
+  <Step title="Close Modal">
+    Click **Cerrar** to return to calendar
+  </Step>
+</Steps>
+
+<Note>
+  You will not see Edit or Delete buttons - these are only available to coordinators and admins.
+</Note>
+
+## Weekly Planning
+
+### Monday Morning Planning
+
+<Steps>
+  <Step title="Switch to Week View">
+    Click **Semana** to see the weekly delivery schedule
+  </Step>
+  
+  <Step title="Identify High-Volume Days">
+    Note which days have multiple deliveries scheduled
+  </Step>
+  
+  <Step title="Plan Staffing">
+    Ensure adequate receiving staff on busy days
+  </Step>
+  
+  <Step title="Check Storage Capacity">
+    Verify available space for large or bulk deliveries
+  </Step>
+  
+  <Step title="Coordinate Equipment">
+    Reserve forklifts, pallet jacks, or other equipment needed
+  </Step>
+  
+  <Step title="Share Schedule">
+    Communicate weekly schedule to receiving team members
+  </Step>
+</Steps>
+
+### Daily Check Pattern
+
+<Steps>
+  <Step title="Early Morning (7 AM)">
+    Review today's scheduled deliveries and prepare receiving area
+  </Step>
+  
+  <Step title="Mid-Morning (10 AM)">
+    Check for any new "En Tránsito" status updates
+  </Step>
+  
+  <Step title="After Lunch (2 PM)">
+    Review remaining expected deliveries for afternoon
+  </Step>
+  
+  <Step title="End of Day (5 PM)">
+    Check tomorrow's schedule and identify any early-morning deliveries
+  </Step>
+</Steps>
+
+## Coordinating with Other Teams
+
+### Working with Coordinators
+
+Maintain regular communication with procurement coordinators:
+
+**When to Contact:**
+
+<CardGroup cols={2}>
+  <Card title="Delivery Received" icon="check-circle">
+    Report receipt so coordinator can update status to "Recibido" (green)
+  </Card>
+  
+  <Card title="Quantity Discrepancy" icon="alert-triangle">
+    Immediately report if received quantity differs from requisition
+  </Card>
+  
+  <Card title="Early Arrival" icon="clock">
+    Notify if delivery arrives before scheduled date
+  </Card>
+  
+  <Card title="Delayed Delivery" icon="clock">
+    Alert if expected delivery has not arrived by end of day
+  </Card>
+  
+  <Card title="Quality Issues" icon="x-circle">
+    Report damaged goods or packaging issues
+  </Card>
+  
+  <Card title="Missing Documentation" icon="file-text">
+    Notify if invoices, COAs, or other paperwork is incomplete
+  </Card>
+</CardGroup>
+
+**Communication Format:**
+
+```
+To: Procurement Coordinator
+Subject: Delivery Receipt - [Product Name] - [Date]
+
+Delivery Details:
+- Product: [Product from requisition]
+- Supplier: [Supplier name]
+- Scheduled Date: [Date from calendar]
+- Actual Delivery Date: [Actual date]
+- Expected Quantity: [From requisition]
+- Received Quantity: [Actual quantity]
+- Status: [Received in good condition / Issues noted]
+- Comments: [Any discrepancies or notes]
+
+Please update system accordingly.
+```
+
+### Working with Laboratory
+
+When materials require testing:
+
+<Steps>
+  <Step title="Check Comments">
+    Review requisition comments for testing requirements
+  </Step>
+  
+  <Step title="Notify Lab">
+    Alert lab team immediately when material requiring testing arrives
+  </Step>
+  
+  <Step title="Isolate Material">
+    Keep material in receiving area or designated quarantine zone
+  </Step>
+  
+  <Step title="Coordinate Sampling">
+    Arrange for lab to collect samples
+  </Step>
+  
+  <Step title="Await Approval">
+    Do not move to final destination until lab approves
+  </Step>
+  
+  <Step title="Move After Approval">
+    Once testing complete, deliver to destination specified in requisition
+  </Step>
+</Steps>
+
+### Working with Production
+
+For urgent or priority deliveries:
+
+<Steps>
+  <Step title="Identify Priority Items">
+    Look for comments indicating urgent or production-critical materials
+  </Step>
+  
+  <Step title="Expedite Processing">
+    Process priority deliveries first
+  </Step>
+  
+  <Step title="Notify Production">
+    Alert production team when priority materials arrive
+  </Step>
+  
+  <Step title="Direct Delivery">
+    Deliver directly to production line if destination indicates
+  </Step>
+</Steps>
+
+## Common Scenarios
+
+### Unscheduled Delivery Arrives
+
+If a delivery arrives that's not on the calendar:
+
+<Steps>
+  <Step title="Check Tomorrow's Schedule">
+    Verify it's not scheduled for a future date
+  </Step>
+  
+  <Step title="Search by Supplier">
+    Look through calendar for any orders from this supplier
+  </Step>
+  
+  <Step title="Review Documentation">
+    Check delivery paperwork for purchase order number
+  </Step>
+  
+  <Step title="Contact Coordinator Immediately">
+    Report unexpected delivery with all details
+  </Step>
+  
+  <Step title="Hold Material">
+    Keep in receiving area until coordinator provides instructions
+  </Step>
+</Steps>
+
+### Partial Delivery
+
+When only part of an order arrives:
+
+<Steps>
+  <Step title="Document Actual Quantity">
+    Record exact quantity received vs. expected
+  </Step>
+  
+  <Step title="Check Delivery Notes">
+    See if driver indicates remaining quantity will follow
+  </Step>
+  
+  <Step title="Notify Coordinator">
+    Report partial delivery with:
+    - Expected quantity
+    - Actual quantity received
+    - Information about remaining quantity (if known)
+  </Step>
+  
+  <Step title="Process Partial Receipt">
+    Receive and store the partial quantity
+  </Step>
+  
+  <Step title="Watch for Follow-Up">
+    Monitor calendar for additional delivery scheduling
+  </Step>
+</Steps>
+
+### Damaged Goods
+
+When delivery arrives damaged:
+
+<Steps>
+  <Step title="Document Damage">
+    Take photos of damaged packages/products
+  </Step>
+  
+  <Step title="Note on Receipt">
+    Mark "damaged" on delivery receipt; have driver acknowledge
+  </Step>
+  
+  <Step title="Isolate Product">
+    Move damaged goods to designated quarantine area
+  </Step>
+  
+  <Step title="Notify Coordinator Immediately">
+    Report with photos and extent of damage
+  </Step>
+  
+  <Step title="Await Instructions">
+    Do not dispose of or use damaged materials until coordinator advises
+  </Step>
+</Steps>
+
+### Delivery Doesn't Arrive
+
+When expected delivery doesn't arrive:
+
+<Steps>
+  <Step title="Confirm Schedule">
+    Verify the delivery was marked "Confirmado" (blue) for today
+  </Step>
+  
+  <Step title="Wait Until End of Day">
+    Some deliveries may arrive late in the afternoon
+  </Step>
+  
+  <Step title="Report to Coordinator">
+    At end of business day, notify coordinator of non-arrival
+  </Step>
+  
+  <Step title="Check Next Day">
+    Monitor if coordinator updates date in calendar
+  </Step>
+</Steps>
+
+## Calendar Navigation
+
+### Month View
+
+**Best for:**
+- Long-term capacity planning
+- Identifying heavy delivery periods
+- Scheduling equipment maintenance during light periods
+
+**How to use:**
+- See overall delivery volume across the month
+- Plan staffing for busy weeks
+- Identify days with 3+ deliveries (will show "more" indicator)
+
+### Week View
+
+**Best for:**
+- Daily operational planning
+- Detailed preparation for each delivery
+- Staff scheduling and task assignment
+
+**How to use:**
+- See all details for deliveries in the next 7 days
+- More space to display product and supplier names
+- Easier to spot patterns (e.g., certain suppliers always deliver Tuesdays)
+
+### Navigation Tips
+
+<CardGroup cols={2}>
+  <Card title="Today Button" icon="calendar-days">
+    Always jump back to current date to see today's deliveries
+  </Card>
+  
+  <Card title="Hover for Quick Info" icon="mouse-pointer">
+    Hover over calendar events to see product and supplier without clicking
+  </Card>
+  
+  <Card title="Multi-Day Deliveries" icon="calendar-range">
+    Some events may span multiple days - check comments for details
+  </Card>
+  
+  <Card title="Refresh Regularly" icon="refresh-cw">
+    Coordinators may update dates - refresh page to see latest changes
+  </Card>
+</CardGroup>
+
+## Mobile Access
+
+Access the calendar from your phone or tablet while on the warehouse floor:
+
+- **Check Incoming**: Quickly verify an arriving delivery is scheduled
+- **View Details**: Tap event to see destination and handling instructions
+- **Take Notes**: Use comments field as reference while receiving
+- **Swipe Navigation**: Swipe between days or weeks
+
+<Tip>
+  Keep a tablet at the receiving dock with the calendar open to quickly verify incoming deliveries.
+</Tip>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Review Morning & Afternoon" icon="clock">
+    Check calendar at start and middle of day to catch any updates
+  </Card>
+  
+  <Card title="Report Immediately" icon="zap">
+    Contact coordinator as soon as issues arise, not at end of day
+  </Card>
+  
+  <Card title="Note Arrival Times" icon="clock-3">
+    Track which suppliers tend to deliver early/late to improve planning
+  </Card>
+  
+  <Card title="Read Comments Carefully" icon="message-square">
+    Special instructions in comments can prevent costly mistakes
+  </Card>
+  
+  <Card title="Prepare in Advance" icon="calendar-check">
+    Set up for next day's deliveries before leaving each evening
+  </Card>
+  
+  <Card title="Maintain Communication" icon="phone">
+    Keep coordinator updated - they rely on your feedback to maintain accurate calendar
+  </Card>
+</CardGroup>
+
+## Reporting Workflow
+
+### Daily Receiving Report
+
+Provide coordinator with end-of-day summary:
+
+```
+Daily Receiving Report - [Date]
+
+Deliveries Received:
+1. [Product] - [Supplier] - [Quantity] - Status: OK
+2. [Product] - [Supplier] - [Quantity] - Status: Partial (60% received)
+3. [Product] - [Supplier] - [Quantity] - Status: Damaged (see photos)
+
+Expected But Not Received:
+1. [Product] - [Supplier] - Scheduled for today, no arrival
+
+Unscheduled Arrivals:
+1. [Product] - [Supplier] - Not on calendar (PO #123456)
+
+Follow-up Required:
+- [Any issues needing coordinator action]
+```
+
+## Safety Considerations
+
+When reviewing calendar for deliveries:
+
+- Check product names for hazardous materials requiring special handling
+- Note if PPE or special equipment needed
+- Verify adequate ventilation for chemical deliveries
+- Confirm proper storage zones are available for incompatible materials
+- Alert safety team if new or unfamiliar materials are scheduled
+
+<Warning>
+  For any hazardous materials, check Safety Data Sheets (SDS) before delivery arrives to ensure proper receiving procedures.
+</Warning>
+
+## Frequently Asked Questions
+
+**Q: Why can't I update the system when deliveries arrive?**
+
+A: CEDIS role has view-only access. Report receipts to coordinators who will update the system.
+
+**Q: What if a delivery arrives but isn't on the calendar?**
+
+A: Contact the procurement coordinator immediately. The requisition may exist but not yet be confirmed, or it could be an error.
+
+**Q: How do I know which deliveries need lab testing?**
+
+A: Check the "Comentarios" (Comments) section in each requisition detail. Testing requirements will be noted there.
+
+**Q: Can I see historical deliveries?**
+
+A: Yes, use the calendar navigation to go back to previous months and see past deliveries.
+
+**Q: What if the destination listed in the requisition is unclear?**
+
+A: Contact the coordinator for clarification before moving the material.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Lab Workflow" icon="flask" href="/guides/lab-workflow">
+    Understand how lab team uses the calendar for testing preparation
+  </Card>
+  
+  <Card title="Coordinator Workflow" icon="user-check" href="/guides/coordinator-workflow">
+    Learn how coordinators manage the requisitions you receive
+  </Card>
+</CardGroup>

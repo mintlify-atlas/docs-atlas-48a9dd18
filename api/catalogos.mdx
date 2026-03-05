@@ -1,0 +1,377 @@
+---
+title: "Catalog Actions"
+description: "Server actions for managing catalog data (suppliers, products, destinations, etc.)"
+---
+
+## Overview
+
+The catalog actions module provides server actions for creating, updating, toggling status, and deleting catalog entries across all catalog tables.
+
+All operations require either `admin` or `coordinadora` role, except permanent deletion which requires `admin` role.
+
+All functions are Next.js Server Actions (marked with `'use server'`).
+
+---
+
+## createCatalogEntry
+
+Creates a new entry in any catalog table. Requires `admin` or `coordinadora` role.
+
+```typescript
+async function createCatalogEntry(
+  table: string,
+  data: any
+): Promise<{ data?: any; error?: string }>
+```
+
+<ParamField path="table" type="string" required>
+  Name of the catalog table: `proveedores`, `productos`, `presentaciones`, `destinos`, `estatus`, or `unidades`
+</ParamField>
+
+<ParamField path="data" type="object" required>
+  Catalog entry data. Structure depends on the table:
+  
+  <Expandable title="Example structures">
+    <ResponseField name="proveedores" type="object">
+      ```typescript
+      { nombre: string }
+      ```
+    </ResponseField>
+    
+    <ResponseField name="productos" type="object">
+      ```typescript
+      { nombre: string, descripcion?: string | null }
+      ```
+    </ResponseField>
+    
+    <ResponseField name="presentaciones" type="object">
+      ```typescript
+      { nombre: string }
+      ```
+    </ResponseField>
+    
+    <ResponseField name="destinos" type="object">
+      ```typescript
+      { nombre: string }
+      ```
+    </ResponseField>
+    
+    <ResponseField name="estatus" type="object">
+      ```typescript
+      { nombre: string, color_hex: string }
+      ```
+    </ResponseField>
+    
+    <ResponseField name="unidades" type="object">
+      ```typescript
+      { nombre: string, abreviatura: string }
+      ```
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="data" type="object">
+  The created catalog entry with generated ID and `activo: true`
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if creation fails
+</ResponseField>
+
+<Note>
+  All new catalog entries are automatically set to `activo: true`.
+</Note>
+
+### Example
+
+```typescript
+import { createCatalogEntry } from '@/lib/actions/catalogos'
+
+// Create a new supplier
+const supplier = await createCatalogEntry('proveedores', {
+  nombre: 'Nuevo Proveedor SA'
+})
+
+// Create a new product
+const product = await createCatalogEntry('productos', {
+  nombre: 'Cloro Industrial',
+  descripcion: 'Hipoclorito de sodio 13%'
+})
+
+// Create a new status
+const status = await createCatalogEntry('estatus', {
+  nombre: 'En Tránsito',
+  color_hex: '#FFA500'
+})
+
+// Create a new unit
+const unit = await createCatalogEntry('unidades', {
+  nombre: 'Kilogramo',
+  abreviatura: 'kg'
+})
+
+if (supplier.error) {
+  console.error('Failed to create:', supplier.error)
+} else {
+  console.log('Created:', supplier.data)
+}
+```
+
+---
+
+## updateCatalogEntry
+
+Updates an existing catalog entry. Requires `admin` or `coordinadora` role.
+
+```typescript
+async function updateCatalogEntry(
+  table: string,
+  id: string,
+  data: any
+): Promise<{ data?: any; error?: string }>
+```
+
+<ParamField path="table" type="string" required>
+  Name of the catalog table
+</ParamField>
+
+<ParamField path="id" type="string" required>
+  ID of the entry to update
+</ParamField>
+
+<ParamField path="data" type="object" required>
+  Fields to update (structure depends on table)
+</ParamField>
+
+### Returns
+
+<ResponseField name="data" type="object">
+  The updated catalog entry
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if update fails
+</ResponseField>
+
+### Example
+
+```typescript
+import { updateCatalogEntry } from '@/lib/actions/catalogos'
+
+// Update supplier name
+const result = await updateCatalogEntry(
+  'proveedores',
+  'supplier-uuid',
+  { nombre: 'Proveedor Actualizado SA' }
+)
+
+// Update product description
+await updateCatalogEntry(
+  'productos',
+  'product-uuid',
+  { descripcion: 'Nueva descripción del producto' }
+)
+
+// Update status color
+await updateCatalogEntry(
+  'estatus',
+  'status-uuid',
+  { color_hex: '#FF0000' }
+)
+
+if (result.error) {
+  console.error('Failed to update:', result.error)
+}
+```
+
+---
+
+## toggleCatalogStatus
+
+Toggles the active/inactive status of a catalog entry. Requires `admin` or `coordinadora` role.
+
+```typescript
+async function toggleCatalogStatus(
+  table: string,
+  id: string,
+  active: boolean
+): Promise<{ success?: boolean; error?: string }>
+```
+
+<ParamField path="table" type="string" required>
+  Name of the catalog table
+</ParamField>
+
+<ParamField path="id" type="string" required>
+  ID of the entry to update
+</ParamField>
+
+<ParamField path="active" type="boolean" required>
+  New active status: `true` to activate, `false` to deactivate
+</ParamField>
+
+### Returns
+
+<ResponseField name="success" type="boolean">
+  `true` if update was successful
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if update fails
+</ResponseField>
+
+<Note>
+  Deactivating an entry does not delete it - it simply marks it as inactive and typically hides it from dropdowns and selectors.
+</Note>
+
+### Example
+
+```typescript
+import { toggleCatalogStatus } from '@/lib/actions/catalogos'
+
+// Deactivate a supplier
+const result = await toggleCatalogStatus(
+  'proveedores',
+  'supplier-uuid',
+  false
+)
+
+// Reactivate a product
+await toggleCatalogStatus(
+  'productos',
+  'product-uuid',
+  true
+)
+
+if (result.error) {
+  console.error('Failed to toggle status:', result.error)
+} else {
+  console.log('Status updated successfully')
+}
+```
+
+---
+
+## deleteCatalogEntry
+
+Permanently deletes a catalog entry. Requires `admin` role.
+
+```typescript
+async function deleteCatalogEntry(
+  table: string,
+  id: string
+): Promise<{ success?: boolean; error?: string }>
+```
+
+<ParamField path="table" type="string" required>
+  Name of the catalog table
+</ParamField>
+
+<ParamField path="id" type="string" required>
+  ID of the entry to delete
+</ParamField>
+
+### Returns
+
+<ResponseField name="success" type="boolean">
+  `true` if deletion was successful
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if deletion fails (including foreign key constraint violations)
+</ResponseField>
+
+<Warning>
+  This operation is permanent and cannot be undone. If the catalog entry is referenced by existing requisitions, the deletion will fail with a foreign key constraint error. In that case, consider using `toggleCatalogStatus` to deactivate it instead.
+</Warning>
+
+### Example
+
+```typescript
+import { deleteCatalogEntry } from '@/lib/actions/catalogos'
+
+const result = await deleteCatalogEntry(
+  'proveedores',
+  'supplier-uuid'
+)
+
+if (result.error) {
+  if (result.error.includes('está siendo utilizado')) {
+    console.error('Cannot delete: entry is in use')
+    // Consider deactivating instead
+  } else {
+    console.error('Failed to delete:', result.error)
+  }
+} else {
+  console.log('Entry deleted successfully')
+}
+```
+
+---
+
+## Catalog Tables
+
+The following catalog tables are supported:
+
+<CodeGroup>
+
+```typescript proveedores
+// Suppliers
+{
+  nombre: string
+}
+```
+
+```typescript productos
+// Products
+{
+  nombre: string,
+  descripcion?: string | null
+}
+```
+
+```typescript presentaciones
+// Presentations
+{
+  nombre: string
+}
+```
+
+```typescript destinos
+// Destinations
+{
+  nombre: string
+}
+```
+
+```typescript estatus
+// Statuses
+{
+  nombre: string,
+  color_hex: string  // e.g., '#FF5733'
+}
+```
+
+```typescript unidades
+// Units
+{
+  nombre: string,
+  abreviatura: string  // e.g., 'kg', 'L', 'pza'
+}
+```
+
+</CodeGroup>
+
+---
+
+## Related Types
+
+- [Proveedor](/api/types/catalogos#proveedor)
+- [Producto](/api/types/catalogos#producto)
+- [Presentacion](/api/types/catalogos#presentacion)
+- [Destino](/api/types/catalogos#destino)
+- [Estatus](/api/types/catalogos#estatus)
+- [Unidad](/api/types/catalogos#unidad)
+- [Catalogos](/api/types/catalogos#catalogos)

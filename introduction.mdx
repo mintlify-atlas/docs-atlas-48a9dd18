@@ -1,0 +1,139 @@
+---
+title: Introduction
+description: Welcome to the Procurement Calendar documentation for Cloro de Hidalgo
+---
+
+# Introduction to Procurement Calendar
+
+Procurement Calendar is an advanced enterprise system designed specifically for **Cloro de Hidalgo S.A. de C.V.** to manage, track, and control the complete lifecycle of raw material requisitions, supplies, and logistics deliveries.
+
+## What is Procurement Calendar?
+
+Procurement Calendar optimizes the supply chain flow at Cloro de Hidalgo by enabling seamless communication between Purchasing, Laboratory, CEDIS (Distribution Centers), and external suppliers. The system ensures every supply arrives at the right time and in the proper form.
+
+<Note>
+This system is built with Next.js 15, Supabase, and features real-time updates, role-based access control, and comprehensive tracking capabilities.
+</Note>
+
+## Who Is This For?
+
+Procurement Calendar is designed for internal teams at Cloro de Hidalgo:
+
+- **Purchasing Coordinators** - Manage requisitions and supplier agreements
+- **Laboratory Teams** - Validate technical specifications and monitor arrivals
+- **CEDIS Personnel** - Confirm receipt and incoming inventory
+- **Administrators** - Oversee users, catalogs, and system-wide operations
+- **Consulta (View-Only)** - Monitor requisitions and deliveries without editing permissions
+
+## Key Capabilities
+
+### Requisition Management
+
+<CardGroup cols={2}>
+  <Card title="Multi-Step Tracking" icon="list-check">
+    Control the complete lifecycle from initial request to physical delivery
+  </Card>
+  <Card title="Date Traceability" icon="calendar">
+    Track requested dates, supplier confirmations, and actual delivery dates
+  </Card>
+  <Card title="Smart Filters" icon="filter">
+    Segment by supplier, destination, status, and time ranges
+  </Card>
+  <Card title="Quick Actions" icon="bolt">
+    Edit and manage status with a single click
+  </Card>
+</CardGroup>
+
+### Logistics Calendar
+
+Visualize supply schedules with a dynamic calendar interface:
+
+- **Weekly/Monthly Views** - Monitor reception workload visually
+- **Color-Coded Status** - Instantly identify pending, urgent, confirmed, or completed deliveries
+- **Direct Management** - Drag-and-drop or click to view details and adjust schedules
+
+### Master Catalogs
+
+Standardize critical information to prevent data entry errors:
+
+- **Suppliers** - Unified directory of supply companies
+- **Products** - Master inventory of raw materials and supplies
+- **Presentations** - Container types, packaging, and cargo units
+- **Units of Measure** - Standardized weights and volumes (kg, L, pieces, etc.)
+- **Destinations** - Reception points (Cloro de Hidalgo plants, CEDIS)
+
+### Security & Access Control
+
+Role-based system with clear hierarchies:
+
+<CardGroup cols={3}>
+  <Card title="Admin" icon="shield-halved">
+    Full system access including user management, catalogs, and audit capabilities
+  </Card>
+  <Card title="Coordinadora" icon="users">
+    Operate requisitions and manage supplier agreements
+  </Card>
+  <Card title="Consulta" icon="eye">
+    View-only access for monitoring purposes
+  </Card>
+</CardGroup>
+
+<Warning>
+New user registration requires administrator approval before access is granted.
+</Warning>
+
+## Technology Stack
+
+Procurement Calendar is built with modern, enterprise-grade technologies:
+
+- **Framework**: Next.js 15+ with React 19 and Server Actions
+- **Backend/Database**: Supabase (PostgreSQL + Realtime)
+- **Authentication**: Supabase Auth with role-based security
+- **Styling**: Tailwind CSS 4
+- **UI Components**: Shadcn UI (built on Radix UI)
+- **Forms**: React Hook Form + Zod validation
+- **Data Tables**: TanStack Table v8
+- **Calendar**: FullCalendar v6
+
+## Benefits
+
+<Info>
+The system provides real-time visibility into your procurement pipeline, reducing delays, improving coordination, and ensuring compliance with quality standards.
+</Info>
+
+### Operational Efficiency
+
+- Eliminate manual tracking with automated status updates
+- Reduce communication overhead between departments
+- Prevent stockouts with visual delivery schedules
+
+### Data Accuracy
+
+- Standardized catalogs prevent duplicate entries
+- Validation at every step ensures data quality
+- Audit trails track all changes and modifications
+
+### Compliance & Control
+
+- Role-based permissions enforce security policies
+- Row-level security protects sensitive data
+- Complete traceability from requisition to delivery
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Set up your development environment and run the application
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Learn about the authentication system and role-based access control
+  </Card>
+</CardGroup>
+
+## Support
+
+For questions or support, contact the Cloro de Hidalgo IT department or refer to the internal documentation portal.
+
+---
+
+© 2026 **Cloro de Hidalgo S.A. de C.V.** - Quality and Development

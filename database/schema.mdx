@@ -1,0 +1,356 @@
+---
+title: "Database Schema"
+description: "PostgreSQL database schema for the Procurement Calendar application"
+---
+
+## Overview
+
+The Procurement Calendar uses PostgreSQL via Supabase with a normalized relational schema. The database consists of catalog tables, a main requisitions table, an audit history table, and user profiles.
+
+<Note>
+All tables use UUID primary keys generated with the `uuid-ossp` extension.
+</Note>
+
+## Schema Architecture
+
+The database is organized into several logical groups:
+
+<CardGroup cols={2}>
+  <Card title="Catalog Tables" icon="database">
+    Reference data for suppliers, products, presentations, destinations, statuses, and units
+  </Card>
+  <Card title="Core Tables" icon="file-invoice">
+    Requisitions (main business entity) and user profiles
+  </Card>
+  <Card title="Audit Tables" icon="history">
+    Change history tracking for all requisition modifications
+  </Card>
+  <Card title="Security" icon="shield">
+    Row Level Security policies for role-based access control
+  </Card>
+</CardGroup>
+
+## Catalog Tables
+
+These tables store reference data used throughout the application. All catalog tables share a common structure:
+
+### Proveedores (Suppliers)
+
+Stores supplier/vendor information.
+
+```sql
+CREATE TABLE proveedores (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre      TEXT NOT NULL,
+  activo      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+<Accordion title="TypeScript Interface">
+```typescript
+export interface Proveedor {
+    id: string
+    nombre: string
+    activo: boolean
+    created_at: string
+}
+```
+</Accordion>
+
+### Productos (Products)
+
+Catalog of products that can be requisitioned.
+
+```sql
+CREATE TABLE productos (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre       TEXT NOT NULL,
+  descripcion  TEXT,
+  activo       BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+<Accordion title="TypeScript Interface">
+```typescript
+export interface Producto {
+    id: string
+    nombre: string
+    descripcion: string | null
+    activo: boolean
+    created_at: string
+}
+```
+</Accordion>
+
+### Presentaciones (Presentations)
+
+Packaging or presentation formats (e.g., "Tambor 200 L", "Saco 25 kg").
+
+```sql
+CREATE TABLE presentaciones (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre      TEXT NOT NULL,
+  activo      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Destinos (Destinations)
+
+Warehouse locations or production lines where products are delivered.
+
+```sql
+CREATE TABLE destinos (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre      TEXT NOT NULL,
+  activo      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Estatus (Status)
+
+Requisition status values with color coding for UI display.
+
+```sql
+CREATE TABLE estatus (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre      TEXT NOT NULL,
+  color_hex   TEXT NOT NULL DEFAULT '#6366F1',
+  activo      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+<Accordion title="Seeded Status Values">
+```sql
+INSERT INTO estatus (nombre, color_hex) VALUES
+  ('Pendiente',    '#F59E0B'),
+  ('Confirmado',   '#3B82F6'),
+  ('En Tránsito',  '#8B5CF6'),
+  ('Recibido',     '#10B981'),
+  ('Cancelado',    '#EF4444'),
+  ('En Revisión',  '#F97316');
+```
+</Accordion>
+
+### Unidades (Units)
+
+Measurement units for quantities (kg, L, pzs, etc.).
+
+```sql
+CREATE TABLE unidades (
+  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre       TEXT NOT NULL,
+  abreviatura  TEXT NOT NULL,
+  activo       BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+<Accordion title="Seeded Unit Values">
+```sql
+INSERT INTO unidades (nombre, abreviatura) VALUES
+  ('Kilogramos',  'kg'),
+  ('Litros',      'L'),
+  ('Piezas',      'pzs'),
+  ('Toneladas',   'ton'),
+  ('Cajas',       'caj'),
+  ('Sacos',       'sac'),
+  ('Tambos',      'tam'),
+  ('Gramos',      'g');
+```
+</Accordion>
+
+## User Tables
+
+### Profiles
+
+Extends Supabase `auth.users` with application-specific profile data.
+
+```sql
+CREATE TABLE profiles (
+  id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  nombre_completo TEXT,
+  rol             user_role NOT NULL DEFAULT 'consulta',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+<Info>
+Profiles are automatically created when a user signs up via the `handle_new_user()` trigger function.
+</Info>
+
+#### User Roles Enum
+
+```sql
+CREATE TYPE user_role AS ENUM ('admin', 'coordinadora', 'consulta');
+```
+
+<Accordion title="Role Descriptions">
+- **admin**: Full system access including user management and all CRUD operations
+- **coordinadora**: Can create, read, and update requisitions; view history
+- **consulta**: Read-only access to requisitions and catalogs
+</Accordion>
+
+#### Auto-Create Profile Trigger
+
+```sql
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, nombre_completo, rol)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'nombre_completo', NEW.email),
+    COALESCE((NEW.raw_user_meta_data->>'rol')::user_role, 'consulta')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+```
+
+## Main Table: Requisiciones
+
+The core table storing all requisition records.
+
+```sql
+CREATE TABLE requisiciones (
+  id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  fecha_recepcion      DATE NOT NULL,
+  proveedor_id         UUID NOT NULL REFERENCES proveedores(id),
+  producto_id          UUID NOT NULL REFERENCES productos(id),
+  presentacion_id      UUID NOT NULL REFERENCES presentaciones(id),
+  destino_id           UUID NOT NULL REFERENCES destinos(id),
+  estatus_id           UUID NOT NULL REFERENCES estatus(id),
+  cantidad_solicitada  NUMERIC(10, 2) NOT NULL CHECK (cantidad_solicitada > 0),
+  unidad_cantidad_id   UUID NOT NULL REFERENCES unidades(id),
+  numero_oc            TEXT,
+  comentarios          TEXT,
+  created_by           UUID NOT NULL REFERENCES auth.users(id),
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Foreign Key Relationships
+
+<CardGroup cols={2}>
+  <Card title="proveedor_id" icon="arrow-right">
+    References `proveedores(id)` - The supplier
+  </Card>
+  <Card title="producto_id" icon="arrow-right">
+    References `productos(id)` - The product being requisitioned
+  </Card>
+  <Card title="presentacion_id" icon="arrow-right">
+    References `presentaciones(id)` - Package format
+  </Card>
+  <Card title="destino_id" icon="arrow-right">
+    References `destinos(id)` - Delivery destination
+  </Card>
+  <Card title="estatus_id" icon="arrow-right">
+    References `estatus(id)` - Current status
+  </Card>
+  <Card title="unidad_cantidad_id" icon="arrow-right">
+    References `unidades(id)` - Unit of measurement
+  </Card>
+  <Card title="created_by" icon="arrow-right">
+    References `auth.users(id)` - User who created the record
+  </Card>
+</CardGroup>
+
+### Performance Indexes
+
+```sql
+CREATE INDEX idx_requisiciones_fecha ON requisiciones(fecha_recepcion);
+CREATE INDEX idx_requisiciones_proveedor ON requisiciones(proveedor_id);
+CREATE INDEX idx_requisiciones_estatus ON requisiciones(estatus_id);
+CREATE INDEX idx_requisiciones_destino ON requisiciones(destino_id);
+```
+
+<Note>
+Indexes are created on frequently queried columns to optimize filtering and sorting operations.
+</Note>
+
+### Auto-Update Timestamp
+
+The `updated_at` field is automatically maintained via trigger:
+
+```sql
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_requisiciones_updated_at
+  BEFORE UPDATE ON requisiciones
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+```
+
+## Audit Table: Requisiciones Historial
+
+Tracks all changes made to requisitions for audit purposes.
+
+```sql
+CREATE TABLE requisiciones_historial (
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  requisicion_id    UUID NOT NULL REFERENCES requisiciones(id) ON DELETE CASCADE,
+  campo_modificado  TEXT NOT NULL,
+  valor_anterior    TEXT,
+  valor_nuevo       TEXT,
+  usuario_id        UUID NOT NULL REFERENCES auth.users(id),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_historial_requisicion ON requisiciones_historial(requisicion_id);
+```
+
+<Accordion title="TypeScript Interface">
+```typescript
+export interface RequisicionHistorial {
+    id: string
+    requisicion_id: string
+    campo_modificado: string
+    valor_anterior: string | null
+    valor_nuevo: string | null
+    usuario_id: string
+    created_at: string
+    profiles?: Profile
+}
+```
+</Accordion>
+
+<Warning>
+History records are automatically deleted when their parent requisition is deleted due to the `ON DELETE CASCADE` constraint.
+</Warning>
+
+## Database Extensions
+
+The schema requires the following PostgreSQL extensions:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```
+
+This extension provides the `uuid_generate_v4()` function used for generating UUIDs.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Data Model" icon="diagram-project" href="/database/data-model">
+    Explore entity relationships and TypeScript types
+  </Card>
+  <Card title="Row Level Security" icon="shield-halved" href="/database/security">
+    Learn about access control policies
+  </Card>
+</CardGroup>

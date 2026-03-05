@@ -1,0 +1,551 @@
+---
+title: 'Master Data Catalogs'
+description: 'Manage standardized data for suppliers, products, destinations, and other reference data'
+icon: 'database'
+---
+
+## Overview
+
+Catalogs are the foundation of data standardization in the Procurement Calendar application. They provide centralized, reusable reference data that ensures consistency across all requisitions. Instead of entering supplier names or product descriptions manually each time, users select from predefined catalog entries.
+
+<Info>
+All catalogs are managed at `/dashboard/catalogos` and require **admin** or **coordinadora** permissions to modify.
+</Info>
+
+## Benefits of Catalog Management
+
+<CardGroup cols={2}>
+  <Card title="Data Consistency" icon="check">
+    Eliminates typos and variations in supplier names, product descriptions, and other reference data
+  </Card>
+  
+  <Card title="Simplified Entry" icon="zap">
+    Dropdown selections are faster than typing and reduce data entry errors
+  </Card>
+  
+  <Card title="Reporting Accuracy" icon="chart-bar">
+    Standardized data enables accurate filtering, grouping, and analytics
+  </Card>
+  
+  <Card title="Maintenance" icon="wrench">
+    Update a supplier's name once in the catalog, and it reflects across all requisitions
+  </Card>
+</CardGroup>
+
+## Available Catalog Types
+
+The application includes six core catalog types:
+
+### 1. Proveedores (Suppliers)
+
+Stores information about suppliers and vendors.
+
+```typescript
+interface Proveedor {
+  id: string
+  nombre: string        // Supplier name
+  activo: boolean       // Active/inactive status
+  created_at: string
+}
+```
+
+**Example entries:**
+- Proveedora Química Nacional
+- Distribuidora del Centro
+- Importadora Técnica
+- Soluciones Industriales SA
+- Comercial de Insumos
+
+<Note>
+Inactive suppliers are hidden from dropdowns but remain in the database to preserve historical requisition data.
+</Note>
+
+### 2. Productos (Products)
+
+Defines the materials and products being procured.
+
+```typescript
+interface Producto {
+  id: string
+  nombre: string           // Product name
+  descripcion: string | null  // Optional description
+  activo: boolean
+  created_at: string
+}
+```
+
+**Example entries:**
+- Sosa Cáustica (Hidróxido de sodio en escamas)
+- LABSA (Ácido sulfonico lineal de benceno)
+- Texapon (Lauril éter sulfato de sodio)
+- Colorante Azul
+- Fragancia Lavanda
+- Cloruro de Sodio
+- Glucamato
+- Alcohol Cetílico
+
+<Tip>
+Use the `descripcion` field for technical specifications, CAS numbers, or quality grades.
+</Tip>
+
+### 3. Presentaciones (Presentations)
+
+Describes how products are packaged or presented.
+
+```typescript
+interface Presentacion {
+  id: string
+  nombre: string       // Presentation format
+  activo: boolean
+  created_at: string
+}
+```
+
+**Example entries:**
+- Granel (Bulk)
+- Tambor 200 L (200L Drum)
+- Cuñete 20 L (20L Container)
+- Garrafón 19 L (19L Jug)
+- Saco 25 kg (25kg Bag)
+- Bolsa 1 kg (1kg Bag)
+- Caja 12 pzas (Box of 12 pieces)
+- Pallet
+
+### 4. Destinos (Destinations)
+
+Defines delivery locations within the organization.
+
+```typescript
+interface Destino {
+  id: string
+  nombre: string       // Location name
+  activo: boolean
+  created_at: string
+}
+```
+
+**Example entries:**
+- Almacén General
+- Línea de Producción 1
+- Línea de Producción 2
+- Laboratorio de Calidad
+- Almacén Materia Prima
+- Planta Amozoc
+- Planta Apizaco
+
+### 5. Estatus (Status)
+
+Defines requisition status options with color coding.
+
+```typescript
+interface Estatus {
+  id: string
+  nombre: string       // Status name
+  color_hex: string    // Hex color code for visual display
+  activo: boolean
+  created_at: string
+}
+```
+
+**Default entries:**
+
+| Status | Color | Hex Code |
+|--------|-------|----------|
+| Pendiente | Orange | `#F59E0B` |
+| Confirmado | Blue | `#3B82F6` |
+| En Tránsito | Purple | `#8B5CF6` |
+| Recibido | Green | `#10B981` |
+| Cancelado | Red | `#EF4444` |
+| En Revisión | Orange | `#F97316` |
+
+<Warning>
+Changing status colors affects the entire application including calendar events and badges. Choose colors carefully for visual consistency.
+</Warning>
+
+### 6. Unidades (Units of Measure)
+
+Defines measurement units for quantities.
+
+```typescript
+interface Unidad {
+  id: string
+  nombre: string           // Full unit name
+  abreviatura: string      // Abbreviated form
+  activo: boolean
+  created_at: string
+}
+```
+
+**Example entries:**
+
+| Nombre | Abreviatura |
+|--------|-------------|
+| Kilogramos | kg |
+| Litros | L |
+| Piezas | pzs |
+| Toneladas | ton |
+| Cajas | caj |
+| Sacos | sac |
+| Tambos | tam |
+| Gramos | g |
+
+## CRUD Operations
+
+All catalog operations are handled through server actions in `lib/actions/catalogos.ts`.
+
+### Creating Catalog Entries
+
+Create new entries in any catalog table:
+
+```typescript
+import { createCatalogEntry } from '@/lib/actions/catalogos'
+
+// Create a new supplier
+const result = await createCatalogEntry('proveedores', {
+  nombre: 'Nuevo Proveedor SA de CV'
+})
+
+if (result.error) {
+  console.error('Error:', result.error)
+} else {
+  console.log('Created:', result.data)
+}
+
+// Create a product with description
+const result = await createCatalogEntry('productos', {
+  nombre: 'Acido Clorhídrico',
+  descripcion: 'Solución al 37%, grado industrial'
+})
+
+// Create a unit of measure
+const result = await createCatalogEntry('unidades', {
+  nombre: 'Metros cúbicos',
+  abreviatura: 'm³'
+})
+
+// Create a status with color
+const result = await createCatalogEntry('estatus', {
+  nombre: 'En Espera',
+  color_hex: '#FCD34D'
+})
+```
+
+<Note>
+All new entries are automatically created with `activo: true`. The `created_by` field is not tracked for catalog entries.
+</Note>
+
+### Updating Catalog Entries
+
+Modify existing catalog entries:
+
+```typescript
+import { updateCatalogEntry } from '@/lib/actions/catalogos'
+
+// Update supplier name
+const result = await updateCatalogEntry(
+  'proveedores',
+  supplierId,
+  {
+    nombre: 'Proveedor Actualizado SA'
+  }
+)
+
+// Update product description
+const result = await updateCatalogEntry(
+  'productos',
+  productId,
+  {
+    descripcion: 'Nueva descripción técnica'
+  }
+)
+
+// Update status color
+const result = await updateCatalogEntry(
+  'estatus',
+  statusId,
+  {
+    color_hex: '#34D399'
+  }
+)
+```
+
+### Toggling Active Status
+
+Deactivate entries without deleting them:
+
+```typescript
+import { toggleCatalogStatus } from '@/lib/actions/catalogos'
+
+// Deactivate a supplier
+const result = await toggleCatalogStatus(
+  'proveedores',
+  supplierId,
+  false  // Set to inactive
+)
+
+// Reactivate a product
+const result = await toggleCatalogStatus(
+  'productos',
+  productId,
+  true  // Set to active
+)
+```
+
+<Tip>
+Inactive entries don't appear in dropdown menus but remain visible in existing requisitions. This preserves data integrity while preventing selection of deprecated options.
+</Tip>
+
+### Deleting Catalog Entries
+
+Permanently remove catalog entries (admin only):
+
+```typescript
+import { deleteCatalogEntry } from '@/lib/actions/catalogos'
+
+const result = await deleteCatalogEntry('proveedores', supplierId)
+
+if (result.error) {
+  // Handle foreign key constraint errors
+  console.error(result.error)
+  // Likely: "No se puede eliminar porque está siendo utilizado..."
+}
+```
+
+<Warning>
+**Deletion Restrictions:**
+- Only **admin** role can delete catalog entries
+- Entries referenced by existing requisitions **cannot be deleted** (foreign key constraint)
+- Error code `23503` indicates the entry is in use
+- **Recommendation**: Use `toggleCatalogStatus` to deactivate instead of deleting
+</Warning>
+
+## Permission Requirements
+
+<CardGroup cols={3}>
+  <Card title="Admin" icon="shield-check">
+    **Full Access**
+    - Create entries
+    - Update entries
+    - Toggle active status
+    - Delete entries
+  </Card>
+  
+  <Card title="Coordinadora" icon="user-check">
+    **Modify Access**
+    - Create entries
+    - Update entries
+    - Toggle active status
+    - Cannot delete
+  </Card>
+  
+  <Card title="Consulta" icon="eye">
+    **Read Only**
+    - View catalogs
+    - Use in dropdowns
+    - No modifications
+  </Card>
+</CardGroup>
+
+## Row-Level Security (RLS)
+
+Catalogs are protected by Supabase RLS policies defined in `supabase/schema.sql:184-199`:
+
+```sql
+-- All authenticated users can read catalogs
+CREATE POLICY "proveedores: all authenticated can select" ON proveedores
+  FOR SELECT TO authenticated USING (TRUE);
+
+-- Only admin can create/update/delete
+CREATE POLICY "proveedores: admin full access" ON proveedores
+  FOR ALL TO authenticated 
+  USING (get_my_role() = 'admin')
+  WITH CHECK (get_my_role() = 'admin');
+```
+
+This pattern applies to all six catalog tables:
+- `proveedores`
+- `productos`
+- `presentaciones`
+- `destinos`
+- `estatus`
+- `unidades`
+
+<Info>
+The `get_my_role()` function retrieves the current user's role from the `profiles` table, enabling role-based access control at the database level.
+</Info>
+
+## Using Catalogs in Forms
+
+Catalogs populate dropdown selections throughout the application:
+
+```tsx
+import { useCatalogos } from '@/lib/hooks/useCatalogos'
+
+function RequisicionForm() {
+  const { catalogos, loading } = useCatalogos()
+  
+  return (
+    <Select
+      value={form.watch('proveedor_id')}
+      onValueChange={(val) => form.setValue('proveedor_id', val)}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Seleccionar proveedor" />
+      </SelectTrigger>
+      <SelectContent>
+        {catalogos.proveedores
+          .filter(p => p.activo || p.id === currentValue)
+          .map(p => (
+            <SelectItem key={p.id} value={p.id}>
+              {p.nombre}
+            </SelectItem>
+          ))}
+      </SelectContent>
+    </Select>
+  )
+}
+```
+
+**Key Features:**
+- Only active entries shown in dropdowns
+- Currently selected value remains visible even if inactive
+- Prevents data inconsistency when editing existing requisitions
+
+## Quick-Add Functionality
+
+The requisition form includes "Quick Add" buttons for creating catalog entries on-the-fly:
+
+```tsx
+<Button
+  type="button"
+  variant="outline"
+  size="icon"
+  className="h-8 w-8 shrink-0 border-dashed"
+  onClick={() => setQuickAdd({ 
+    open: true, 
+    title: 'Proveedor', 
+    table: 'proveedores', 
+    field: 'proveedor_id' 
+  })}
+>
+  <Plus className="h-3 w-3" />
+</Button>
+```
+
+This opens a `QuickAddModal` that:
+1. Creates the new catalog entry
+2. Refreshes the catalog data
+3. Automatically selects the new entry in the form
+4. Closes the modal
+
+<Tip>
+Quick-add is available for all catalog types except `estatus`, which requires careful color selection and should be managed centrally.
+</Tip>
+
+## Fetching All Catalogs
+
+Retrieve all catalog data in a single request:
+
+```typescript
+import { getCatalogos } from '@/lib/actions/requisiciones'
+
+const catalogos = await getCatalogos()
+
+// Returns:
+interface Catalogos {
+  proveedores: Proveedor[]
+  productos: Producto[]
+  presentaciones: Presentacion[]
+  destinos: Destino[]
+  estatus: Estatus[]
+  unidades: Unidad[]
+}
+```
+
+This function uses `Promise.all()` to fetch all catalogs concurrently for optimal performance:
+
+```typescript
+const [proveedores, productos, presentaciones, destinos, estatus, unidades] =
+  await Promise.all([
+    supabase.from('proveedores').select('*').order('nombre'),
+    supabase.from('productos').select('*').order('nombre'),
+    supabase.from('presentaciones').select('*').order('nombre'),
+    supabase.from('destinos').select('*').order('nombre'),
+    supabase.from('estatus').select('*').order('nombre'),
+    supabase.from('unidades').select('*').order('nombre'),
+  ])
+```
+
+## Auto-Revalidation
+
+All catalog mutations automatically revalidate dependent pages:
+
+```typescript
+import { revalidatePath } from 'next/cache'
+
+// After create/update/delete
+revalidatePath('/dashboard/catalogos')
+revalidatePath('/dashboard/requisiciones')
+revalidatePath('/dashboard/requisiciones/nueva')
+```
+
+This ensures:
+- Catalog page shows updated data immediately
+- Form dropdowns reflect new entries
+- No manual refresh required
+
+## Database Schema
+
+All catalogs follow a consistent table structure:
+
+```sql
+CREATE TABLE proveedores (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre      TEXT NOT NULL,
+  activo      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+Variations:
+- **productos** includes `descripcion TEXT` field
+- **estatus** includes `color_hex TEXT NOT NULL DEFAULT '#6366F1'`
+- **unidades** includes `abreviatura TEXT NOT NULL`
+
+## Best Practices
+
+<Accordion title="Naming conventions">
+- Use consistent capitalization (e.g., "Proveedor ABC SA" not "proveedor abc sa")
+- Include full legal names for suppliers
+- Use descriptive names for products ("Sosa Cáustica" not "SC01")
+- Keep abbreviations short (2-4 characters) for units
+- Use standard color names or hex codes for status
+</Accordion>
+
+<Accordion title="When to deactivate vs delete">
+**Deactivate** when:
+- The entry has been used in past requisitions
+- You may need to reactivate it in the future
+- You want to maintain historical data integrity
+
+**Delete** when:
+- Entry was created by mistake and never used
+- Entry contains incorrect or duplicate data
+- You're certain it will never be needed
+</Accordion>
+
+<Accordion title="Managing status colors">
+1. Use consistent colors across your organization
+2. Choose high-contrast colors for accessibility
+3. Test colors in both light and dark modes
+4. Document color meanings in a style guide
+5. Avoid similar colors for different statuses
+6. Consider color blindness when selecting palettes
+</Accordion>
+
+<Accordion title="Organizing products">
+- Group related products using prefixes (e.g., "Fragancia - Lavanda", "Fragancia - Limón")
+- Use the description field for technical specs
+- Create separate products for different grades/purities
+- Combine with presentations to fully describe SKUs
+</Accordion>

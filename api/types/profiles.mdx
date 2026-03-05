@@ -1,0 +1,294 @@
+---
+title: "Profile & Auth Types"
+description: "TypeScript interfaces for user profiles, roles, and authentication"
+---
+
+## UserRole
+
+Enum-like type defining all available user roles in the system.
+
+```typescript
+type UserRole = 'admin' | 'coordinadora' | 'laboratorio' | 'cedis' | 'pendiente' | 'consulta'
+```
+
+### Roles
+
+<ResponseField name="admin" type="'admin'">
+  Administrator role with full system access, including:
+  - All CRUD operations on requisitions
+  - All catalog management operations
+  - User management (approve, reject, delete, change roles)
+  - Access to all modules
+</ResponseField>
+
+<ResponseField name="coordinadora" type="'coordinadora'">
+  Coordinator role with elevated permissions:
+  - Create, update, and delete requisitions
+  - Manage catalog entries (create, update, toggle status)
+  - Cannot delete users or perform admin-only operations
+</ResponseField>
+
+<ResponseField name="laboratorio" type="'laboratorio'">
+  Laboratory department role:
+  - View requisitions filtered by laboratory destination
+  - Limited editing permissions
+  - Department-specific access
+</ResponseField>
+
+<ResponseField name="cedis" type="'cedis'">
+  Distribution center (CEDIS) role:
+  - View requisitions filtered by CEDIS destination
+  - Limited editing permissions
+  - Department-specific access
+</ResponseField>
+
+<ResponseField name="pendiente" type="'pendiente'">
+  Pending approval status:
+  - Newly registered users start with this role
+  - Cannot access main application features
+  - Shown pending approval page until admin assigns a role
+</ResponseField>
+
+<ResponseField name="consulta" type="'consulta'">
+  Read-only consultation role:
+  - View-only access to requisitions and data
+  - Cannot create, update, or delete any records
+  - Useful for auditors or external stakeholders
+</ResponseField>
+
+---
+
+## Profile
+
+User profile entity linked to Supabase authentication.
+
+```typescript
+interface Profile {
+  id: string
+  nombre_completo: string | null
+  email: string | null
+  rol: UserRole
+  created_at: string
+  updated_at: string
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string">
+  Unique identifier (UUID) - matches Supabase Auth user ID
+</ResponseField>
+
+<ResponseField name="nombre_completo" type="string | null">
+  User's full name
+</ResponseField>
+
+<ResponseField name="email" type="string | null">
+  User's email address
+</ResponseField>
+
+<ResponseField name="rol" type="UserRole">
+  User's assigned role determining their permissions
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Timestamp when the profile was created (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Timestamp of last profile update (ISO 8601 format)
+</ResponseField>
+
+### Example
+
+```typescript
+import type { Profile } from '@/types'
+import { getCurrentProfile } from '@/lib/actions/auth'
+
+const profile: Profile | null = await getCurrentProfile()
+
+if (!profile) {
+  // User not authenticated
+  return redirect('/login')
+}
+
+// Check permissions
+const canEdit = ['admin', 'coordinadora'].includes(profile.rol)
+const isPending = profile.rol === 'pendiente'
+const isReadOnly = profile.rol === 'consulta'
+
+console.log(`Welcome, ${profile.nombre_completo}!`)
+console.log(`Role: ${profile.rol}`)
+```
+
+---
+
+## RequisicionHistorial
+
+Audit trail record for requisition changes.
+
+```typescript
+interface RequisicionHistorial {
+  id: string
+  requisicion_id: string
+  campo_modificado: string
+  valor_anterior: string | null
+  valor_nuevo: string | null
+  usuario_id: string
+  created_at: string
+  profiles?: Profile
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string">
+  Unique identifier (UUID)
+</ResponseField>
+
+<ResponseField name="requisicion_id" type="string">
+  Foreign key to the requisition that was modified
+</ResponseField>
+
+<ResponseField name="campo_modificado" type="string">
+  Name of the field that was changed (e.g., 'cantidad_entregada', 'estatus_id')
+</ResponseField>
+
+<ResponseField name="valor_anterior" type="string | null">
+  Previous value before the change (stored as string, may be null for new fields)
+</ResponseField>
+
+<ResponseField name="valor_nuevo" type="string | null">
+  New value after the change (stored as string, may be null if field was cleared)
+</ResponseField>
+
+<ResponseField name="usuario_id" type="string">
+  Foreign key to the user (profile) who made the change
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Timestamp when the change was made (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="profiles" type="Profile">
+  Joined user profile object (populated when using Supabase joins)
+</ResponseField>
+
+### Example
+
+```typescript
+import type { RequisicionHistorial } from '@/types'
+import { getHistorial } from '@/lib/actions/requisiciones'
+
+// Get history for a specific requisition
+const result = await getHistorial('requisicion-uuid')
+
+if (result.data) {
+  result.data.forEach((entry: RequisicionHistorial) => {
+    console.log(`
+=== Change Record ===")
+    console.log(`Field: ${entry.campo_modificado}`)
+    console.log(`Before: ${entry.valor_anterior || 'null'}`)
+    console.log(`After: ${entry.valor_nuevo || 'null'}`)
+    console.log(`By: ${entry.profiles?.nombre_completo}`)
+    console.log(`When: ${new Date(entry.created_at).toLocaleString()}`)
+  })
+}
+```
+
+### Audit Trail Usage
+
+The audit trail is automatically populated when updating requisitions:
+
+```typescript
+import { updateRequisicion } from '@/lib/actions/requisiciones'
+
+const result = await updateRequisicion(
+  'requisicion-uuid',
+  {
+    cantidad_entregada: 95,
+    fecha_entregado: '2026-03-10'
+  },
+  [
+    {
+      campo: 'cantidad_entregada',
+      anterior: 'null',
+      nuevo: '95'
+    },
+    {
+      campo: 'fecha_entregado',
+      anterior: 'null',
+      nuevo: '2026-03-10'
+    }
+  ]
+)
+```
+
+<Note>
+  Values are stored as strings in the audit trail to support any data type. Applications should parse and format these strings appropriately for display.
+</Note>
+
+---
+
+## Permission Patterns
+
+### Role-Based Access Control
+
+```typescript
+import type { Profile, UserRole } from '@/types'
+
+function hasPermission(
+  profile: Profile | null,
+  requiredRoles: UserRole[]
+): boolean {
+  if (!profile) return false
+  return requiredRoles.includes(profile.rol)
+}
+
+// Usage examples
+const canManageRequisitions = hasPermission(profile, ['admin', 'coordinadora'])
+const canDeleteUsers = hasPermission(profile, ['admin'])
+const canViewRequisitions = hasPermission(profile, [
+  'admin',
+  'coordinadora',
+  'laboratorio',
+  'cedis',
+  'consulta'
+])
+```
+
+### Conditional UI Rendering
+
+```typescript
+import { getCurrentProfile } from '@/lib/actions/auth'
+
+export default async function RequisicionesPage() {
+  const profile = await getCurrentProfile()
+  
+  if (!profile || profile.rol === 'pendiente') {
+    return <PendingApprovalMessage />
+  }
+  
+  const canEdit = ['admin', 'coordinadora'].includes(profile.rol)
+  const isReadOnly = profile.rol === 'consulta'
+  
+  return (
+    <div>
+      <RequisicionesTable />
+      {canEdit && <CreateRequisicionButton />}
+      {isReadOnly && <ReadOnlyBanner />}
+    </div>
+  )
+}
+```
+
+---
+
+## Related Actions
+
+- [getCurrentProfile()](/api/auth#getcurrentprofile) - Get current user profile
+- [signIn()](/api/auth#signin) - Authenticate user
+- [signUp()](/api/auth#signup) - Register new user
+- [updateProfile()](/api/users#updateprofile) - Update profile information
+- [updateUserRole()](/api/users#updateuserrole) - Change user role (admin only)
+- [approveUser()](/api/users#approveuser) - Approve pending users

@@ -1,0 +1,524 @@
+---
+title: 'Roles & Permissions'
+description: 'User roles, access control, and permission system for the procurement application'
+icon: 'users'
+---
+
+## Overview
+
+The Procurement Calendar application implements a role-based access control (RBAC) system to manage user permissions. Roles determine what actions users can perform, which pages they can access, and what data they can view or modify.
+
+<Info>
+Roles are stored in the `profiles` table and enforced through Supabase Row-Level Security (RLS) policies at the database level.
+</Info>
+
+## Available Roles
+
+The application defines six user roles as a PostgreSQL enum:
+
+```sql
+CREATE TYPE user_role AS ENUM (
+  'admin',
+  'coordinadora',
+  'laboratorio',
+  'cedis',
+  'pendiente',
+  'consulta'
+);
+```
+
+<Note>
+Despite the enum definition including six roles, the current implementation primarily uses **admin**, **coordinadora**, and **consulta**. The roles **laboratorio**, **cedis**, and **pendiente** are reserved for future feature expansion.
+</Note>
+
+## Role Definitions
+
+### Admin
+
+<Card title="Administrator" icon="shield-check">
+  Full system access with all permissions enabled.
+</Card>
+
+**Permissions:**
+- ✅ Create requisitions
+- ✅ Edit all requisitions
+- ✅ Delete requisitions
+- ✅ View all requisitions
+- ✅ Create/update/delete catalog entries
+- ✅ Toggle catalog active status
+- ✅ View audit history
+- ✅ Manage user profiles
+- ✅ Access all dashboard pages
+- ✅ Set confirmed delivery dates
+
+**Use Cases:**
+- System administrators
+- IT staff
+- Senior procurement managers
+- Users who need full control
+
+### Coordinadora
+
+<Card title="Coordinator" icon="user-check">
+  Procurement coordinator with operational permissions.
+</Card>
+
+**Permissions:**
+- ✅ Create requisitions
+- ✅ Edit requisitions
+- ❌ Delete requisitions (admin only)
+- ✅ View all requisitions
+- ✅ Create/update catalog entries
+- ✅ Toggle catalog active status
+- ❌ Delete catalog entries (admin only)
+- ✅ View audit history
+- ✅ Access requisitions and calendar pages
+- ✅ Set confirmed delivery dates
+
+**Use Cases:**
+- Procurement coordinators
+- Supply chain managers
+- Users who manage day-to-day operations
+
+**Code Reference:**
+```typescript
+// lib/actions/requisiciones.ts:12-14
+if (!profile || !['admin', 'coordinadora'].includes(profile.rol)) {
+  return { error: 'No tienes permisos para crear requisiciones' }
+}
+```
+
+### Consulta
+
+<Card title="Consultation" icon="eye">
+  Read-only access for viewing and reporting.
+</Card>
+
+**Permissions:**
+- ❌ Create requisitions
+- ❌ Edit requisitions
+- ❌ Delete requisitions
+- ✅ View all requisitions
+- ❌ Modify catalogs
+- ✅ View catalogs
+- ✅ View audit history (limited)
+- ✅ Access calendar and table views
+- ❌ Cannot set delivery dates
+
+**Use Cases:**
+- Warehouse staff
+- Finance/accounting teams
+- Reporting and analytics users
+- External auditors
+- Read-only stakeholders
+
+### Pendiente
+
+<Card title="Pending Approval" icon="clock">
+  Newly registered users awaiting role assignment.
+</Card>
+
+**Permissions:**
+- ❌ All operations blocked
+- ✅ Can see "pending approval" page
+- ⏳ Waiting for admin to assign proper role
+
+**Use Cases:**
+- New user sign-ups
+- Users waiting for access approval
+- Temporary lockout state
+
+**Workflow:**
+1. User signs up via `/login` with email/password
+2. Profile created with `rol: 'pendiente'` by default
+3. User redirected to `/dashboard/pendiente` page
+4. Admin assigns appropriate role
+5. User gains access based on new role
+
+**Code Reference:**
+```typescript
+// lib/actions/auth.ts:84-85
+COALESCE((NEW.raw_user_meta_data->>'rol')::user_role, 'consulta')
+```
+
+<Note>
+By default, new users get the **consulta** role if not specified during signup. The **pendiente** role must be explicitly set.
+</Note>
+
+### Laboratorio & CEDIS
+
+<Card title="Reserved Roles" icon="flask">
+  Future roles for specialized workflows (not currently implemented).
+</Card>
+
+These roles are defined in the database schema but not actively used in the current application logic.
+
+**Potential Future Use Cases:**
+- **laboratorio**: Quality control staff who verify received materials
+- **cedis**: Distribution center staff who manage inventory
+
+## Permission Matrix
+
+| Action | Admin | Coordinadora | Consulta | Pendiente |
+|--------|-------|--------------|----------|----------|
+| View requisitions | ✅ | ✅ | ✅ | ❌ |
+| Create requisitions | ✅ | ✅ | ❌ | ❌ |
+| Edit requisitions | ✅ | ✅ | ❌ | ❌ |
+| Delete requisitions | ✅ | ❌ | ❌ | ❌ |
+| View catalogs | ✅ | ✅ | ✅ | ❌ |
+| Create catalog entries | ✅ | ✅ | ❌ | ❌ |
+| Update catalog entries | ✅ | ✅ | ❌ | ❌ |
+| Delete catalog entries | ✅ | ❌ | ❌ | ❌ |
+| Set confirmed dates | ✅ | ✅ | ❌ | ❌ |
+| View audit history | ✅ | ✅ | Partial | ❌ |
+| Manage users | ✅ | ❌ | ❌ | ❌ |
+
+## Profile Structure
+
+User profiles extend Supabase authentication:
+
+```typescript
+interface Profile {
+  id: string              // UUID matching auth.users.id
+  nombre_completo: string | null  // Full name
+  email: string | null    // Email address
+  rol: UserRole           // One of the six roles
+  created_at: string
+  updated_at: string
+}
+
+type UserRole = 'admin' | 'coordinadora' | 'laboratorio' | 'cedis' | 'pendiente' | 'consulta'
+```
+
+**Profile Creation:**
+
+Profiles are automatically created when a user signs up via database trigger:
+
+```sql
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, nombre_completo, rol)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'nombre_completo', NEW.email),
+    COALESCE((NEW.raw_user_meta_data->>'rol')::user_role, 'consulta')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+```
+
+## Row-Level Security Policies
+
+Permissions are enforced at the database level through RLS policies:
+
+### Profiles Table
+
+```sql
+-- Users can view their own profile
+CREATE POLICY "profiles: anyone can view own" ON profiles
+  FOR SELECT USING (id = auth.uid());
+
+-- Admins can view all profiles
+CREATE POLICY "profiles: admin can view all" ON profiles
+  FOR SELECT USING (get_my_role() = 'admin');
+
+-- Users can update their own profile
+CREATE POLICY "profiles: user can update own" ON profiles
+  FOR UPDATE USING (id = auth.uid());
+
+-- Admins can manage all profiles
+CREATE POLICY "profiles: admin can manage all" ON profiles
+  FOR ALL USING (get_my_role() = 'admin');
+```
+
+### Requisiciones Table
+
+```sql
+-- All authenticated users can view requisitions
+CREATE POLICY "requisiciones: all authenticated can select" ON requisiciones
+  FOR SELECT TO authenticated USING (TRUE);
+
+-- Admin and coordinadora can insert
+CREATE POLICY "requisiciones: admin and coordinadora can insert" ON requisiciones
+  FOR INSERT TO authenticated
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+
+-- Admin and coordinadora can update
+CREATE POLICY "requisiciones: admin and coordinadora can update" ON requisiciones
+  FOR UPDATE TO authenticated
+  USING (get_my_role() IN ('admin', 'coordinadora'))
+  WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+
+-- Only admin can delete
+CREATE POLICY "requisiciones: admin can delete" ON requisiciones
+  FOR DELETE TO authenticated
+  USING (get_my_role() = 'admin');
+```
+
+### Catalog Tables
+
+```sql
+-- All authenticated users can read catalogs
+CREATE POLICY "proveedores: all authenticated can select" ON proveedores
+  FOR SELECT TO authenticated USING (TRUE);
+
+-- Only admin can modify
+CREATE POLICY "proveedores: admin full access" ON proveedores
+  FOR ALL TO authenticated
+  USING (get_my_role() = 'admin')
+  WITH CHECK (get_my_role() = 'admin');
+```
+
+<Info>
+The `get_my_role()` helper function retrieves the current user's role from the profiles table:
+
+```sql
+CREATE OR REPLACE FUNCTION get_my_role()
+RETURNS user_role AS $$
+  SELECT rol FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+```
+</Info>
+
+## Checking Permissions in Code
+
+The application provides hooks and utilities for permission checks:
+
+### useAuthRole Hook
+
+```typescript
+import { useAuthRole } from '@/lib/hooks/useAuthRole'
+
+function RequisitionsPage() {
+  const { role, canCreate, canEdit, canDelete } = useAuthRole()
+  
+  return (
+    <div>
+      {canCreate && <Button>Nueva Requisición</Button>}
+      
+      {canEdit && <Button>Editar</Button>}
+      
+      {canDelete && <Button>Eliminar</Button>}
+      
+      {role === 'admin' && <AdminPanel />}
+    </div>
+  )
+}
+```
+
+### Server-Side Permission Check
+
+```typescript
+import { getCurrentProfile } from '@/lib/actions/auth'
+
+export async function serverAction() {
+  const profile = await getCurrentProfile()
+  
+  if (!profile) {
+    return { error: 'No autenticado' }
+  }
+  
+  if (!['admin', 'coordinadora'].includes(profile.rol)) {
+    return { error: 'Permisos insuficientes' }
+  }
+  
+  // Proceed with action
+}
+```
+
+## Assigning Roles
+
+Only admins can assign or change user roles:
+
+```typescript
+import { createClient } from '@/lib/supabase/server'
+
+export async function updateUserRole(userId: string, newRole: UserRole) {
+  const supabase = await createClient()
+  const profile = await getCurrentProfile()
+  
+  // Check if current user is admin
+  if (profile?.rol !== 'admin') {
+    return { error: 'Solo administradores pueden cambiar roles' }
+  }
+  
+  // Update the target user's role
+  const { error } = await supabase
+    .from('profiles')
+    .update({ rol: newRole })
+    .eq('id', userId)
+  
+  if (error) return { error: error.message }
+  
+  return { success: true }
+}
+```
+
+## Workflow by Role
+
+<Steps>
+  <Step title="Admin Workflow">
+    1. Full access to all features
+    2. Manage requisitions (create, edit, delete)
+    3. Manage catalogs (create, edit, delete)
+    4. Assign roles to users
+    5. View complete audit trails
+    6. Configure system settings
+  </Step>
+  
+  <Step title="Coordinadora Workflow">
+    1. Create and manage requisitions
+    2. Set confirmed delivery dates
+    3. Update requisition status as deliveries progress
+    4. Add suppliers and products to catalogs
+    5. Filter and view calendar/table views
+    6. Cannot delete data or manage users
+  </Step>
+  
+  <Step title="Consulta Workflow">
+    1. View requisitions in calendar and table
+    2. Apply filters to find specific requisitions
+    3. View requisition details and history
+    4. Export/print reports (if implemented)
+    5. Cannot modify any data
+  </Step>
+</Steps>
+
+## UI Permission Controls
+
+The UI automatically adapts based on user role:
+
+### Hide/Show Elements
+
+```tsx
+// components/forms/RequisicionForm.tsx:272-282
+const canEditConfirmedDate = role === 'admin' || role === 'coordinadora'
+
+<Input
+  type="date"
+  {...form.register('fecha_confirmada')}
+  disabled={!canEditConfirmedDate}
+  className={canEditConfirmedDate ? 'border-blue-500' : 'bg-gray-100 cursor-not-allowed'}
+/>
+```
+
+### Conditional Rendering
+
+```tsx
+// app/dashboard/requisiciones/page.tsx:72-83
+{canCreate && (
+  <Button onClick={handleCreate}>
+    <Plus className="mr-2 h-4 w-4" />
+    Nueva Requisición
+  </Button>
+)}
+
+{canEdit && (
+  <Button onClick={() => setFormOpen(true)}>
+    <Pencil className="h-4 w-4" />
+  </Button>
+)}
+```
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Never Trust the Client" icon="shield">
+    Always validate permissions on the server side. UI controls are for UX only, not security.
+  </Card>
+  
+  <Card title="Use RLS Policies" icon="database">
+    Enforce permissions at the database level with Row-Level Security policies.
+  </Card>
+  
+  <Card title="Principle of Least Privilege" icon="lock">
+    Grant users only the minimum permissions needed for their role.
+  </Card>
+  
+  <Card title="Audit Role Changes" icon="file-text">
+    Log when user roles are modified, including who made the change and when.
+  </Card>
+</CardGroup>
+
+## Common Permission Errors
+
+<Accordion title="No tienes permisos para crear requisiciones">
+**Cause:** User has `consulta` or `pendiente` role
+
+**Solution:** Admin must update user's role to `admin` or `coordinadora`
+
+```sql
+UPDATE profiles SET rol = 'coordinadora' WHERE id = 'user-uuid';
+```
+</Accordion>
+
+<Accordion title="Solo administradores pueden eliminar">
+**Cause:** User has `coordinadora` role trying to delete
+
+**Solution:** Contact an admin to perform the deletion, or request admin role if appropriate
+</Accordion>
+
+<Accordion title="No se puede eliminar porque está siendo utilizado">
+**Cause:** Trying to delete a catalog entry referenced by requisitions
+
+**Solution:** 
+1. Use `toggleCatalogStatus` to deactivate instead
+2. Or delete all related requisitions first (not recommended)
+
+```typescript
+await toggleCatalogStatus('proveedores', supplierId, false)
+```
+</Accordion>
+
+## Future Enhancements
+
+<Warning>
+The following roles are defined but not currently implemented in the application logic. They are reserved for future features.
+</Warning>
+
+### Laboratorio Role (Future)
+
+Planned permissions:
+- View requisitions assigned to laboratory
+- Record quality control results
+- Approve/reject received materials
+- Update requisition status to "approved" or "rejected"
+
+### CEDIS Role (Future)
+
+Planned permissions:
+- View inventory levels
+- Record material receipts
+- Update delivery status
+- Manage warehouse locations
+
+## Testing Permissions
+
+To test different permission levels:
+
+1. Create test users with different roles
+2. Sign in as each user
+3. Verify UI elements appear/disappear correctly
+4. Attempt restricted actions and verify error messages
+5. Check database directly to confirm RLS policies block unauthorized access
+
+```typescript
+// Test script example
+const testUsers = [
+  { email: 'admin@test.com', rol: 'admin' },
+  { email: 'coord@test.com', rol: 'coordinadora' },
+  { email: 'viewer@test.com', rol: 'consulta' },
+]
+
+for (const user of testUsers) {
+  await signIn(user.email, 'password')
+  await testRequisitionActions()
+  await signOut()
+}
+```

@@ -1,80 +1,307 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get Procurement Calendar running in your development environment
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+This guide will help you set up and run the Procurement Calendar application on your local development machine.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Before you begin, ensure you have:
 
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- **Node.js 18.x or higher** installed on your system
+- A **Supabase account** (free tier is sufficient for development)
+- **Git** for cloning the repository
+- A code editor (VS Code recommended)
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+The application uses Next.js 16.1.6 with React 19, so ensure your Node.js version is compatible.
 </Note>
+
+## Installation Steps
+
+<Steps>
+
+<Step title="Clone the Repository">
+
+Clone the Procurement Calendar repository to your local machine:
+
+```bash
+git clone https://github.com/AlejandroMartinezG/App_Compras.git
+cd App_Compras
+```
+
+This will create a local copy of the project and navigate into the project directory.
+
+</Step>
+
+<Step title="Install Dependencies">
+
+Install all required npm packages:
+
+```bash
+npm install
+```
+
+This will install all dependencies defined in `package.json`, including:
+
+- Next.js framework and React
+- Supabase client libraries
+- UI components (Shadcn UI, Radix UI)
+- FullCalendar for the calendar view
+- TanStack Table for data tables
+- Form libraries (React Hook Form, Zod)
+- Tailwind CSS and styling utilities
+
+<Info>
+The installation may take a few minutes depending on your internet connection.
+</Info>
+
+</Step>
+
+<Step title="Configure Environment Variables">
+
+Create a `.env.local` file in the project root directory with your Supabase credentials:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Finding Your Supabase Credentials
+
+1. Log in to your [Supabase Dashboard](https://app.supabase.com/)
+2. Select your project (or create a new one)
+3. Go to **Settings** → **API**
+4. Copy the **Project URL** and **anon/public key**
+
+<Warning>
+Never commit your `.env.local` file to version control. It contains sensitive credentials that should remain private.
+</Warning>
+
+### Environment Variables Explained
+
+| Variable | Purpose |
+|----------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL endpoint |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anonymous key for client-side requests |
+
+The `NEXT_PUBLIC_` prefix makes these variables accessible in browser-side code, which is necessary for Supabase authentication and data fetching.
+
+</Step>
+
+<Step title="Set Up Supabase Database">
+
+Initialize your Supabase database with the required schema:
+
+1. Open your Supabase project dashboard
+2. Navigate to the **SQL Editor**
+3. Open the file `supabase/schema.sql` from your local project
+4. Copy the entire contents
+5. Paste into the Supabase SQL Editor
+6. Click **Run** to execute the schema
+
+This will create:
+
+- **Catalog tables**: `proveedores`, `productos`, `presentaciones`, `destinos`, `estatus`, `unidades`
+- **Core tables**: `profiles`, `requisiciones`, `requisiciones_historial`
+- **Row-Level Security policies** for role-based access control
+- **Database functions** for triggers and helpers
+- **Seed data** with initial catalog entries
+
+<Tip>
+The schema includes sample data for suppliers, products, and status types to help you get started quickly.
+</Tip>
+
+### Verify Database Setup
+
+After running the schema, verify the tables were created:
+
+1. Go to **Table Editor** in Supabase
+2. You should see all tables listed
+3. Check that seed data exists in the `estatus` and `unidades` tables
+
+</Step>
+
+<Step title="Run the Development Server">
+
+Start the Next.js development server:
+
+```bash
+npm run dev
+```
+
+The application will start on `http://localhost:3000` by default.
+
+### Available Scripts
+
+From `package.json`, these npm scripts are available:
+
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  }
+}
+```
+
+- **`npm run dev`** - Start development server with hot reload
+- **`npm run build`** - Build production-optimized application
+- **`npm run start`** - Run production build locally
+- **`npm run lint`** - Check code for linting errors
+
+<Info>
+The development server includes hot module replacement (HMR), so changes to your code will automatically reflect in the browser.
+</Info>
+
+</Step>
+
+<Step title="Access the Application">
+
+Open your browser and navigate to:
+
+```
+http://localhost:3000
+```
+
+You will be redirected to the login page at `/login`.
+
+### First-Time Setup
+
+1. Click **"Solicitar Acceso"** (Request Access) tab
+2. Fill in the registration form:
+   - Full name
+   - Email address
+   - Password (minimum 6 characters)
+   - Confirm password
+3. Submit the form
+
+<Warning>
+New accounts are created with `consulta` (view-only) role by default and require administrator approval before full access is granted.
+</Warning>
+
+### Create an Admin User
+
+For development, you'll need to manually promote a user to admin:
+
+1. Create an account through the registration form
+2. Go to Supabase **Table Editor** → **profiles** table
+3. Find your user record
+4. Change the `rol` field from `consulta` to `admin`
+5. Log out and log back in
+
+Now you have full administrative access to the system.
+
+</Step>
+
+</Steps>
+
+## Verify Installation
+
+After completing the setup, verify everything works:
+
+### 1. Authentication
+
+- Log in with your credentials
+- Verify you're redirected to `/dashboard/calendar`
+
+### 2. Calendar View
+
+- The calendar should load without errors
+- You should see the current month view
+
+### 3. Navigation
+
+- Check that sidebar navigation works
+- Access different sections based on your role
+
+### 4. Data Access
+
+- Navigate to **Catálogos** (if admin/coordinadora)
+- Verify seed data is visible in the catalog tables
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication & Roles" icon="lock" href="/authentication">
+    Learn about the authentication system and role-based permissions
+  </Card>
+  <Card title="Project Structure" icon="folder-tree">
+    Understand the codebase organization and key directories
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Port Already in Use
+
+If port 3000 is occupied, Next.js will automatically try 3001, 3002, etc. Or specify a custom port:
+
+```bash
+PORT=3001 npm run dev
+```
+
+### Supabase Connection Issues
+
+If you see authentication errors:
+
+1. Verify your `.env.local` file has correct credentials
+2. Check that environment variables are properly formatted
+3. Restart the development server after changing `.env.local`
+
+### Database Schema Errors
+
+If tables are missing:
+
+1. Ensure the entire `schema.sql` file was executed
+2. Check for errors in the Supabase SQL Editor
+3. Drop tables and re-run the schema if needed
+
+### Module Not Found Errors
+
+If you encounter missing module errors:
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+## Development Tools
+
+### Recommended VS Code Extensions
+
+- **ESLint** - Code linting
+- **Tailwind CSS IntelliSense** - CSS class autocompletion
+- **Prettier** - Code formatting
+- **TypeScript and JavaScript Language Features** - Enhanced IntelliSense
+
+### Browser Developer Tools
+
+Use browser DevTools to:
+
+- Inspect network requests to Supabase
+- Debug React components
+- Monitor console for errors
+- Test responsive layouts
+
+<Tip>
+Install the React Developer Tools browser extension for enhanced debugging capabilities.
+</Tip>
+
+## Production Deployment
+
+For production deployment instructions, refer to the deployment documentation. The application can be deployed to:
+
+- Vercel (recommended for Next.js)
+- Netlify
+- AWS Amplify
+- Self-hosted Node.js server
+
+---
+
+You're now ready to start developing with Procurement Calendar! If you encounter any issues, consult the troubleshooting section or reach out to the development team.

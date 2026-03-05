@@ -1,0 +1,373 @@
+---
+title: "User Management Actions"
+description: "Server actions for managing user accounts and roles"
+---
+
+## Overview
+
+The user management module provides server actions for querying users, approving new registrations, managing roles, and updating profiles. Most operations require admin privileges.
+
+All functions are Next.js Server Actions (marked with `'use server'`).
+
+---
+
+## getPendingUsers
+
+Retrieves all users with pending approval (rol = 'pendiente').
+
+```typescript
+async function getPendingUsers(): Promise<{
+  data?: Profile[];
+  error?: string;
+}>
+```
+
+### Returns
+
+<ResponseField name="data" type="Profile[]">
+  Array of user profiles with `pendiente` role, sorted by creation date (newest first)
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if query fails
+</ResponseField>
+
+### Example
+
+```typescript
+import { getPendingUsers } from '@/lib/actions/users'
+
+const result = await getPendingUsers()
+
+if (result.data) {
+  console.log(`${result.data.length} users pending approval`)
+  result.data.forEach(user => {
+    console.log(`- ${user.nombre_completo} (${user.email})`)
+  })
+}
+```
+
+---
+
+## getActiveUsers
+
+Retrieves all active users (any role except 'pendiente').
+
+```typescript
+async function getActiveUsers(): Promise<{
+  data?: Profile[];
+  error?: string;
+}>
+```
+
+### Returns
+
+<ResponseField name="data" type="Profile[]">
+  Array of active user profiles, sorted by creation date (newest first)
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if query fails
+</ResponseField>
+
+### Example
+
+```typescript
+import { getActiveUsers } from '@/lib/actions/users'
+
+const result = await getActiveUsers()
+
+if (result.data) {
+  console.log(`${result.data.length} active users`)
+  result.data.forEach(user => {
+    console.log(`- ${user.nombre_completo} [${user.rol}]`)
+  })
+}
+```
+
+---
+
+## approveUser
+
+Approves a pending user and assigns them a role.
+
+```typescript
+async function approveUser(
+  userId: string,
+  newRole: UserRole
+): Promise<{ error?: string }>
+```
+
+<ParamField path="userId" type="string" required>
+  ID of the user to approve
+</ParamField>
+
+<ParamField path="newRole" type="UserRole" required>
+  Role to assign: `admin`, `coordinadora`, `laboratorio`, `cedis`, or `consulta`
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if approval fails, undefined on success
+</ResponseField>
+
+<Note>
+  This function updates the user's `rol` field and sets `updated_at` to the current timestamp. The `/dashboard/admin` route is automatically revalidated.
+</Note>
+
+### Example
+
+```typescript
+import { approveUser } from '@/lib/actions/users'
+
+const result = await approveUser(
+  'user-uuid',
+  'laboratorio'
+)
+
+if (result.error) {
+  console.error('Failed to approve user:', result.error)
+} else {
+  console.log('User approved successfully')
+}
+```
+
+---
+
+## rejectUser
+
+Rejects a pending user and deletes their account permanently. Requires admin client.
+
+```typescript
+async function rejectUser(
+  userId: string
+): Promise<{ error?: string }>
+```
+
+<ParamField path="userId" type="string" required>
+  ID of the user to reject
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if rejection fails, undefined on success
+</ResponseField>
+
+<Warning>
+  This operation permanently deletes the user's authentication account. It cannot be undone.
+</Warning>
+
+### Example
+
+```typescript
+import { rejectUser } from '@/lib/actions/users'
+
+const result = await rejectUser('user-uuid')
+
+if (result.error) {
+  console.error('Failed to reject user:', result.error)
+} else {
+  console.log('User rejected and deleted')
+}
+```
+
+---
+
+## deleteUser
+
+Deletes a user account permanently. Requires admin client.
+
+```typescript
+async function deleteUser(
+  userId: string
+): Promise<{ error?: string }>
+```
+
+<ParamField path="userId" type="string" required>
+  ID of the user to delete
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if deletion fails, undefined on success
+</ResponseField>
+
+<Warning>
+  This operation permanently deletes the user's authentication account and profile. It cannot be undone.
+</Warning>
+
+### Example
+
+```typescript
+import { deleteUser } from '@/lib/actions/users'
+
+const result = await deleteUser('user-uuid')
+
+if (result.error) {
+  console.error('Failed to delete user:', result.error)
+} else {
+  console.log('User deleted successfully')
+}
+```
+
+---
+
+## updateUserRole
+
+Updates a user's role.
+
+```typescript
+async function updateUserRole(
+  userId: string,
+  newRole: UserRole
+): Promise<{ error?: string }>
+```
+
+<ParamField path="userId" type="string" required>
+  ID of the user to update
+</ParamField>
+
+<ParamField path="newRole" type="UserRole" required>
+  New role to assign: `admin`, `coordinadora`, `laboratorio`, `cedis`, `pendiente`, or `consulta`
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if update fails, undefined on success
+</ResponseField>
+
+### Example
+
+```typescript
+import { updateUserRole } from '@/lib/actions/users'
+
+// Promote user to admin
+const result = await updateUserRole('user-uuid', 'admin')
+
+// Change to read-only role
+await updateUserRole('user-uuid', 'consulta')
+
+if (result.error) {
+  console.error('Failed to update role:', result.error)
+} else {
+  console.log('Role updated successfully')
+}
+```
+
+---
+
+## updateProfile
+
+Updates the current user's profile information.
+
+```typescript
+async function updateProfile(
+  data: { nombre_completo: string }
+): Promise<{ error?: string }>
+```
+
+<ParamField path="data" type="object" required>
+  Profile data to update
+  
+  <Expandable title="properties">
+    <ResponseField name="nombre_completo" type="string" required>
+      User's full name
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if update fails, undefined on success
+</ResponseField>
+
+<Note>
+  This function updates only the current authenticated user's profile. Users can update their own name but cannot change their role or email.
+</Note>
+
+### Example
+
+```typescript
+import { updateProfile } from '@/lib/actions/users'
+
+const result = await updateProfile({
+  nombre_completo: 'María González López'
+})
+
+if (result.error) {
+  console.error('Failed to update profile:', result.error)
+} else {
+  console.log('Profile updated successfully')
+}
+```
+
+---
+
+## changePassword
+
+Changes the current user's password.
+
+```typescript
+async function changePassword(
+  newPassword: string
+): Promise<{ error?: string }>
+```
+
+<ParamField path="newPassword" type="string" required>
+  The new password
+</ParamField>
+
+### Returns
+
+<ResponseField name="error" type="string">
+  Error message if password change fails, undefined on success
+</ResponseField>
+
+<Note>
+  Users can change their own password without providing the old password. The change is immediate and the user remains logged in.
+</Note>
+
+### Example
+
+```typescript
+import { changePassword } from '@/lib/actions/users'
+
+const result = await changePassword('new-secure-password-123')
+
+if (result.error) {
+  console.error('Failed to change password:', result.error)
+} else {
+  console.log('Password changed successfully')
+}
+```
+
+---
+
+## Admin Client
+
+Some operations (reject, delete) require the Supabase admin client with service role key:
+
+```typescript
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+const adminClient = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+```
+
+<Warning>
+  The service role key bypasses Row Level Security (RLS). Use it only in secure server-side contexts.
+</Warning>
+
+---
+
+## Related Types
+
+- [Profile](/api/types/profiles#profile)
+- [UserRole](/api/types/profiles#userrole)

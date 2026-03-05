@@ -1,0 +1,451 @@
+---
+title: "Requisition Actions"
+description: "Server actions for managing procurement requisitions"
+---
+
+## Overview
+
+The requisitions module provides server actions for creating, reading, updating, and deleting requisitions (procurement requests). All operations include role-based access control and maintain an audit trail.
+
+All functions are Next.js Server Actions (marked with `'use server'`).
+
+---
+
+## createRequisicion
+
+Creates a new requisition. Requires `admin` or `coordinadora` role.
+
+```typescript
+async function createRequisicion(
+  data: RequisicionFormData
+): Promise<{ data?: Requisicion; error?: string }>
+```
+
+<ParamField path="data" type="RequisicionFormData" required>
+  Requisition data to create
+  
+  <Expandable title="properties">
+    <ResponseField name="fecha_recepcion" type="string" required>
+      Reception date (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="proveedor_id" type="string" required>
+      Supplier ID (foreign key to proveedores)
+    </ResponseField>
+    
+    <ResponseField name="producto_id" type="string" required>
+      Product ID (foreign key to productos)
+    </ResponseField>
+    
+    <ResponseField name="presentacion_id" type="string" required>
+      Presentation ID (foreign key to presentaciones)
+    </ResponseField>
+    
+    <ResponseField name="destino_id" type="string" required>
+      Destination ID (foreign key to destinos)
+    </ResponseField>
+    
+    <ResponseField name="estatus_id" type="string" required>
+      Status ID (foreign key to estatus)
+    </ResponseField>
+    
+    <ResponseField name="cantidad_solicitada" type="number" required>
+      Requested quantity
+    </ResponseField>
+    
+    <ResponseField name="unidad_cantidad_id" type="string" required>
+      Unit ID (foreign key to unidades)
+    </ResponseField>
+    
+    <ResponseField name="numero_oc" type="string | null">
+      Purchase order number
+    </ResponseField>
+    
+    <ResponseField name="requisicion_numero" type="string | null">
+      Requisition number
+    </ResponseField>
+    
+    <ResponseField name="fecha_oc" type="string | null">
+      Purchase order date
+    </ResponseField>
+    
+    <ResponseField name="fecha_solicitada_entrega" type="string | null">
+      Requested delivery date
+    </ResponseField>
+    
+    <ResponseField name="fecha_confirmada" type="string | null">
+      Confirmed delivery date
+    </ResponseField>
+    
+    <ResponseField name="fecha_entregado" type="string | null">
+      Actual delivery date
+    </ResponseField>
+    
+    <ResponseField name="cantidad_entregada" type="number | null">
+      Delivered quantity
+    </ResponseField>
+    
+    <ResponseField name="factura_remision" type="string | null">
+      Invoice/remission number
+    </ResponseField>
+    
+    <ResponseField name="comentarios" type="string | null">
+      Additional comments
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="data" type="Requisicion">
+  The created requisition object with generated ID
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if creation fails
+</ResponseField>
+
+### Example
+
+```typescript
+import { createRequisicion } from '@/lib/actions/requisiciones'
+
+const result = await createRequisicion({
+  fecha_recepcion: '2026-03-05',
+  proveedor_id: 'uuid-proveedor',
+  producto_id: 'uuid-producto',
+  presentacion_id: 'uuid-presentacion',
+  destino_id: 'uuid-destino',
+  estatus_id: 'uuid-estatus',
+  cantidad_solicitada: 100,
+  unidad_cantidad_id: 'uuid-unidad',
+  requisicion_numero: 'REQ-2026-001',
+  comentarios: 'Urgente para producción'
+})
+
+if (result.error) {
+  console.error('Failed to create:', result.error)
+} else {
+  console.log('Created requisition:', result.data.id)
+}
+```
+
+---
+
+## updateRequisicion
+
+Updates an existing requisition and logs changes to the audit trail. Requires `admin` or `coordinadora` role.
+
+```typescript
+async function updateRequisicion(
+  id: string,
+  data: Partial<RequisicionFormData>,
+  camposModificados: Array<{
+    campo: string;
+    anterior: string;
+    nuevo: string;
+  }>
+): Promise<{ data?: Requisicion; error?: string }>
+```
+
+<ParamField path="id" type="string" required>
+  ID of the requisition to update
+</ParamField>
+
+<ParamField path="data" type="Partial<RequisicionFormData>" required>
+  Fields to update (any subset of RequisicionFormData)
+</ParamField>
+
+<ParamField path="camposModificados" type="array" required>
+  Array of change records for audit trail
+  
+  <Expandable title="properties">
+    <ResponseField name="campo" type="string" required>
+      Name of the modified field
+    </ResponseField>
+    
+    <ResponseField name="anterior" type="string" required>
+      Previous value (as string)
+    </ResponseField>
+    
+    <ResponseField name="nuevo" type="string" required>
+      New value (as string)
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="data" type="Requisicion">
+  The updated requisition object
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if update fails
+</ResponseField>
+
+<Note>
+  The audit trail entries are automatically written to `requisiciones_historial` table with the current user's ID.
+</Note>
+
+### Example
+
+```typescript
+import { updateRequisicion } from '@/lib/actions/requisiciones'
+
+const result = await updateRequisicion(
+  'requisicion-uuid',
+  {
+    cantidad_entregada: 95,
+    fecha_entregado: '2026-03-10'
+  },
+  [
+    {
+      campo: 'cantidad_entregada',
+      anterior: 'null',
+      nuevo: '95'
+    },
+    {
+      campo: 'fecha_entregado',
+      anterior: 'null',
+      nuevo: '2026-03-10'
+    }
+  ]
+)
+
+if (result.error) {
+  console.error('Failed to update:', result.error)
+}
+```
+
+---
+
+## deleteRequisicion
+
+Deletes a requisition and its audit history (via CASCADE). Requires `admin` or `coordinadora` role.
+
+```typescript
+async function deleteRequisicion(
+  id: string
+): Promise<{ success?: boolean; error?: string }>
+```
+
+<ParamField path="id" type="string" required>
+  ID of the requisition to delete
+</ParamField>
+
+### Returns
+
+<ResponseField name="success" type="boolean">
+  `true` if deletion was successful
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if deletion fails
+</ResponseField>
+
+<Warning>
+  This operation is permanent. The requisition and all associated history records will be deleted.
+</Warning>
+
+### Example
+
+```typescript
+import { deleteRequisicion } from '@/lib/actions/requisiciones'
+
+const result = await deleteRequisicion('requisicion-uuid')
+
+if (result.error) {
+  console.error('Failed to delete:', result.error)
+} else {
+  console.log('Requisition deleted successfully')
+}
+```
+
+---
+
+## getRequisiciones
+
+Retrieves requisitions with optional filters. Includes all related catalog data via joins.
+
+```typescript
+async function getRequisiciones(
+  filters?: RequisicionFilters
+): Promise<{ data?: Requisicion[]; error?: string }>
+```
+
+<ParamField path="filters" type="RequisicionFilters">
+  Optional filters to apply
+  
+  <Expandable title="properties">
+    <ResponseField name="proveedor_id" type="string">
+      Filter by supplier ID
+    </ResponseField>
+    
+    <ResponseField name="destino_id" type="string">
+      Filter by destination ID
+    </ResponseField>
+    
+    <ResponseField name="estatus_id" type="string">
+      Filter by status ID
+    </ResponseField>
+    
+    <ResponseField name="fecha_desde" type="string">
+      Start date for date range filter (ISO 8601)
+    </ResponseField>
+    
+    <ResponseField name="fecha_hasta" type="string">
+      End date for date range filter (ISO 8601)
+    </ResponseField>
+    
+    <ResponseField name="search" type="string">
+      Search term (not yet implemented in this function)
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+<ResponseField name="data" type="Requisicion[]">
+  Array of requisitions with populated relations (proveedor, producto, presentacion, destino, estatus, unidad_cantidad)
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if query fails
+</ResponseField>
+
+### Example
+
+```typescript
+import { getRequisiciones } from '@/lib/actions/requisiciones'
+
+// Get all requisitions
+const all = await getRequisiciones()
+
+// Get filtered requisitions
+const filtered = await getRequisiciones({
+  proveedor_id: 'supplier-uuid',
+  fecha_desde: '2026-01-01',
+  fecha_hasta: '2026-03-31',
+  estatus_id: 'status-uuid'
+})
+
+if (filtered.data) {
+  filtered.data.forEach(req => {
+    console.log(`${req.requisicion_numero}: ${req.proveedor?.nombre}`)
+  })
+}
+```
+
+---
+
+## getCatalogos
+
+Retrieves all catalog data (suppliers, products, presentations, destinations, statuses, and units).
+
+```typescript
+async function getCatalogos(): Promise<Catalogos>
+```
+
+### Returns
+
+<ResponseField name="catalogos" type="Catalogos">
+  Object containing all catalog arrays
+  
+  <Expandable title="properties">
+    <ResponseField name="proveedores" type="Proveedor[]">
+      Array of suppliers
+    </ResponseField>
+    
+    <ResponseField name="productos" type="Producto[]">
+      Array of products
+    </ResponseField>
+    
+    <ResponseField name="presentaciones" type="Presentacion[]">
+      Array of presentations
+    </ResponseField>
+    
+    <ResponseField name="destinos" type="Destino[]">
+      Array of destinations
+    </ResponseField>
+    
+    <ResponseField name="estatus" type="Estatus[]">
+      Array of statuses
+    </ResponseField>
+    
+    <ResponseField name="unidades" type="Unidad[]">
+      Array of units
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+  All catalog arrays are sorted alphabetically by name.
+</Note>
+
+### Example
+
+```typescript
+import { getCatalogos } from '@/lib/actions/requisiciones'
+
+const catalogos = await getCatalogos()
+
+console.log('Suppliers:', catalogos.proveedores)
+console.log('Products:', catalogos.productos)
+console.log('Statuses:', catalogos.estatus)
+```
+
+---
+
+## getHistorial
+
+Retrieves audit trail history for requisitions.
+
+```typescript
+async function getHistorial(
+  requisicionId?: string
+): Promise<{ data?: RequisicionHistorial[]; error?: string }>
+```
+
+<ParamField path="requisicionId" type="string">
+  Optional ID to filter history for a specific requisition. If omitted, returns all history.
+</ParamField>
+
+### Returns
+
+<ResponseField name="data" type="RequisicionHistorial[]">
+  Array of history records with populated user profiles, sorted by creation date (newest first)
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if query fails
+</ResponseField>
+
+### Example
+
+```typescript
+import { getHistorial } from '@/lib/actions/requisiciones'
+
+// Get history for specific requisition
+const history = await getHistorial('requisicion-uuid')
+
+if (history.data) {
+  history.data.forEach(entry => {
+    console.log(`${entry.campo_modificado}: ${entry.valor_anterior} → ${entry.valor_nuevo}`)
+    console.log(`Changed by: ${entry.profiles?.nombre_completo}`)
+  })
+}
+
+// Get all history
+const allHistory = await getHistorial()
+```
+
+---
+
+## Related Types
+
+- [Requisicion](/api/types/requisicion#requisicion)
+- [RequisicionFormData](/api/types/requisicion#requisicionformdata)
+- [RequisicionFilters](/api/types/requisicion#requisicionfilters)
+- [RequisicionHistorial](/api/types/profiles#requisicionhistorial)
+- [Catalogos](/api/types/catalogos#catalogos)

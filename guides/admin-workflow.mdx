@@ -1,0 +1,294 @@
+---
+title: "Admin Workflow"
+description: "Complete guide to administrator responsibilities and workflows in the Procurement Calendar system"
+---
+
+The **Admin** role has complete system access and is responsible for managing users, maintaining catalogs, and overseeing all procurement operations.
+
+## Admin Responsibilities
+
+<CardGroup cols={2}>
+  <Card title="User Management" icon="users">
+    Approve new user registrations and assign roles to team members
+  </Card>
+  <Card title="Catalog Maintenance" icon="book-open">
+    Manage suppliers, products, presentations, destinations, statuses, and units
+  </Card>
+  <Card title="Full Data Access" icon="shield">
+    Create, edit, and delete requisitions across all departments
+  </Card>
+  <Card title="System Configuration" icon="settings">
+    Control system-wide settings and permissions
+  </Card>
+</CardGroup>
+
+## User Management
+
+### Approving New Users
+
+When new team members register, they appear in the **Solicitudes Pendientes** (Pending Requests) section.
+
+<Steps>
+  <Step title="Navigate to Administration">
+    Go to **Dashboard > Administración** in the sidebar
+  </Step>
+  
+  <Step title="Review Pending Requests">
+    View all users with "pendiente" status awaiting approval
+  </Step>
+  
+  <Step title="Assign Role">
+    Click **Aprobar** and select the appropriate role:
+    - **Admin** - Full system access
+    - **Coordinadora** - Create/edit requisitions and manage catalogs
+    - **Laboratorio** - View-only access for quality control team
+    - **CEDIS** - View-only access for warehouse team
+  </Step>
+  
+  <Step title="Confirm Approval">
+    Click **Confirmar aprobación** to activate the user account
+  </Step>
+</Steps>
+
+<Note>
+  Users with "pendiente" status cannot access the system until an admin approves their account.
+</Note>
+
+### Managing Active Users
+
+<Steps>
+  <Step title="Switch to Active Users Tab">
+    Click the **Usuarios Activos** tab in the Administration panel
+  </Step>
+  
+  <Step title="Change User Roles">
+    Click **Cambiar** next to any user to reassign their role
+  </Step>
+  
+  <Step title="Remove Users (Optional)">
+    Use the trash icon to permanently delete user accounts
+  </Step>
+</Steps>
+
+<Warning>
+  Deleting a user account is permanent and cannot be undone. The user will need to register again to regain access.
+</Warning>
+
+## Catalog Management
+
+### Managing Catalogs
+
+Admins have full control over all system catalogs used in requisitions.
+
+<Steps>
+  <Step title="Open Catalogs">
+    Navigate to **Dashboard > Catálogos**
+  </Step>
+  
+  <Step title="Select Catalog Type">
+    Choose from the available tabs:
+    - **Proveedores** (Suppliers)
+    - **Productos** (Products)
+    - **Presentaciones** (Package types)
+    - **Destinos** (Delivery destinations)
+    - **Estatus** (Status options)
+    - **Unidades** (Units of measure)
+  </Step>
+  
+  <Step title="Add New Entries">
+    Click **Nuevo [Type]** to create a new catalog entry
+  </Step>
+  
+  <Step title="Edit Existing Entries">
+    Use the pencil icon to modify existing catalog items
+  </Step>
+  
+  <Step title="Toggle Active Status">
+    Click the status badge to activate/deactivate entries without deleting them
+  </Step>
+  
+  <Step title="Delete Entries (Admin Only)">
+    Use the trash icon to permanently remove catalog items
+  </Step>
+</Steps>
+
+<Tip>
+  Toggle **Ver Inactivos** to show inactive catalog entries. Deactivating is safer than deleting when entries have existing dependencies.
+</Tip>
+
+### Status Colors
+
+When managing the **Estatus** catalog, you can customize the color (hex code) for each status. This affects how requisitions appear on the calendar:
+
+- **Pendiente** - Amber (#F59E0B)
+- **Confirmado** - Blue (#3B82F6)
+- **En Tránsito** - Purple (#8B5CF6)
+- **Recibido** - Green (#10B981)
+- **Cancelado** - Red (#EF4444)
+- **En Revisión** - Orange (#F97316)
+
+## Requisition Management
+
+### Creating Requisitions
+
+Admins can create requisitions on behalf of any department.
+
+<Steps>
+  <Step title="Start New Requisition">
+    Navigate to **Dashboard > Administrar Requisiciones** and click **Nueva Requisición**
+  </Step>
+  
+  <Step title="Fill Required Fields">
+    Complete all mandatory fields marked with asterisks (*):
+    - Fecha Confirmada (confirmed delivery date)
+    - Proveedor (supplier)
+    - Producto (product)
+    - Presentación (package type)
+    - Destino (destination)
+    - Estatus (status)
+    - Cantidad y Unidad (quantity and unit)
+  </Step>
+  
+  <Step title="Add Optional Details">
+    Fill in tracking information:
+    - № REQUI (requisition number)
+    - Fecha de OC (purchase order date)
+    - Folio OC (purchase order number)
+    - Fecha Solicitada (requested date)
+    - Factura/Remisión (invoice/receipt)
+  </Step>
+  
+  <Step title="Add Delivery Information">
+    Update actual delivery details:
+    - Fecha Entregado (actual delivery date)
+    - Cantidad Entregada (actual quantity received)
+  </Step>
+  
+  <Step title="Save Requisition">
+    Click **Generar Nueva Requisición** to save
+  </Step>
+</Steps>
+
+### Editing Requisitions
+
+<Steps>
+  <Step title="Locate Requisition">
+    Find the requisition in the calendar or requisitions list
+  </Step>
+  
+  <Step title="Open Details">
+    Click the event to open the detail modal
+  </Step>
+  
+  <Step title="Edit">
+    Click **Editar** to modify any field
+  </Step>
+  
+  <Step title="Save Changes">
+    Click **Guardar Cambios** to update the requisition
+  </Step>
+</Steps>
+
+<Info>
+  All changes are tracked in the audit history (requisiciones_historial table) for accountability.
+</Info>
+
+### Deleting Requisitions
+
+<Steps>
+  <Step title="Open Requisition Detail">
+    Click on the requisition event to open the detail modal
+  </Step>
+  
+  <Step title="Initiate Delete">
+    Click the trash icon at the bottom left
+  </Step>
+  
+  <Step title="Confirm Deletion">
+    Click **Sí, borrar** to permanently delete the requisition
+  </Step>
+</Steps>
+
+<Warning>
+  Only admins and coordinators can delete requisitions. This action cannot be undone.
+</Warning>
+
+## Calendar View
+
+Admins can view and manage all requisitions in the calendar view.
+
+- **Month View**: See all scheduled deliveries by month
+- **Week View**: Switch to weekly view for detailed planning
+- **Event Colors**: Each requisition is color-coded by status
+- **Click Events**: Click any event to view details or edit
+
+## Quick Add Feature
+
+When creating requisitions, admins can quickly add missing catalog entries without leaving the form.
+
+<Steps>
+  <Step title="Click Plus Icon">
+    While creating a requisition, click the **+** icon next to any dropdown field
+  </Step>
+  
+  <Step title="Add New Entry">
+    Enter the name of the new supplier, product, or other catalog item
+  </Step>
+  
+  <Step title="Save and Select">
+    The new entry is automatically saved and selected in the form
+  </Step>
+</Steps>
+
+<Tip>
+  This feature is especially useful when coordinators contact you about urgent orders from new suppliers.
+</Tip>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Regular User Reviews" icon="calendar-check">
+    Review pending user requests weekly to ensure team members have timely access
+  </Card>
+  
+  <Card title="Catalog Cleanup" icon="broom">
+    Periodically deactivate unused suppliers or products instead of deleting them
+  </Card>
+  
+  <Card title="Audit Trail" icon="file-text">
+    Monitor the history table to track who made changes to critical requisitions
+  </Card>
+  
+  <Card title="Backup Coordinator Access" icon="shield-check">
+    Assign coordinator roles to backup personnel to ensure business continuity
+  </Card>
+</CardGroup>
+
+## Common Admin Tasks
+
+### Daily
+- Review and approve pending user registrations
+- Monitor calendar for delivery confirmations
+- Respond to coordinator requests for catalog updates
+
+### Weekly
+- Review active users and role assignments
+- Clean up inactive catalog entries
+- Export data for management reporting
+
+### Monthly
+- Audit system usage and permissions
+- Review and update status colors and categories
+- Plan system maintenance or upgrades
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Coordinator Workflow" icon="user-plus" href="/guides/coordinator-workflow">
+    Learn how coordinators create and manage daily requisitions
+  </Card>
+  
+  <Card title="Role Permissions" icon="shield" href="/features/roles">
+    Understand detailed permission levels for each role
+  </Card>
+</CardGroup>

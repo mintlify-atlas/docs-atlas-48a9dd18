@@ -1,0 +1,175 @@
+---
+title: Supabase Setup
+description: Set up your Supabase project for the Procurement Calendar application
+---
+
+This guide walks you through creating and configuring a Supabase project for the Procurement Calendar application.
+
+## Prerequisites
+
+- A [Supabase account](https://supabase.com) (free tier works fine)
+- Basic understanding of PostgreSQL
+
+## Setup Process
+
+<Steps>
+  <Step title="Create a Supabase Project">
+    1. Log in to your [Supabase Dashboard](https://supabase.com/dashboard)
+    2. Click **New Project**
+    3. Fill in the project details:
+       - **Name**: `procurement-calendar` (or your preferred name)
+       - **Database Password**: Generate a strong password and save it securely
+       - **Region**: Choose the region closest to your users
+    4. Click **Create new project**
+    
+    <Note>
+      Project creation takes 1-2 minutes. Wait for it to complete before proceeding.
+    </Note>
+  </Step>
+
+  <Step title="Run the Database Schema">
+    1. In your Supabase dashboard, navigate to **SQL Editor** from the left sidebar
+    2. Click **New Query**
+    3. Copy the entire contents of `supabase/schema.sql` from your project repository
+    4. Paste it into the SQL Editor
+    5. Click **Run** to execute the script
+    
+    <Info>
+      The schema creates all necessary tables, including:
+      - Catalog tables (proveedores, productos, presentaciones, destinos, estatus, unidades)
+      - Core tables (profiles, requisiciones)
+      - Audit tables (requisiciones_historial)
+    </Info>
+
+    **Schema Overview:**
+
+    ```sql
+    -- Key tables created:
+    CREATE TABLE profiles (
+      id              UUID PRIMARY KEY REFERENCES auth.users(id),
+      nombre_completo TEXT,
+      rol             user_role NOT NULL DEFAULT 'consulta',
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE requisiciones (
+      id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      fecha_recepcion      DATE NOT NULL,
+      proveedor_id         UUID NOT NULL REFERENCES proveedores(id),
+      producto_id          UUID NOT NULL REFERENCES productos(id),
+      presentacion_id      UUID NOT NULL REFERENCES presentaciones(id),
+      destino_id           UUID NOT NULL REFERENCES destinos(id),
+      estatus_id           UUID NOT NULL REFERENCES estatus(id),
+      cantidad_solicitada  NUMERIC(10, 2) NOT NULL,
+      unidad_cantidad_id   UUID NOT NULL REFERENCES unidades(id),
+      numero_oc            TEXT,
+      comentarios          TEXT,
+      created_by           UUID NOT NULL REFERENCES auth.users(id),
+      created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ```
+  </Step>
+
+  <Step title="Configure Authentication Settings">
+    Navigate to **Authentication** → **Providers** in your Supabase dashboard.
+
+    **Email Configuration:**
+    1. Ensure **Email** provider is enabled (it's on by default)
+    2. Configure email templates under **Email Templates**:
+       - Customize confirmation email
+       - Customize password reset email
+    3. Under **Auth Settings**:
+       - Set **Site URL** to your production domain (e.g., `https://procurement.clorodehidalgo.com`)
+       - Add redirect URLs for local development: `http://localhost:3000/**`
+
+    <Warning>
+      Make sure to add all your deployment URLs (production, staging) to the **Redirect URLs** list to prevent authentication errors.
+    </Warning>
+  </Step>
+
+  <Step title="Verify Row Level Security">
+    The schema automatically enables Row Level Security (RLS) on all tables. Verify the policies:
+
+    1. Go to **Authentication** → **Policies**
+    2. Confirm policies are active for:
+       - `profiles` - Users can view their own profile; admins can view all
+       - `requisiciones` - All authenticated users can view; admin and coordinadora can create/update
+       - Catalog tables - All authenticated users can read; only admins can modify
+
+    **Role-based access:**
+    - **admin**: Full access to all tables and user management
+    - **coordinadora**: Can create and edit requisiciones
+    - **consulta**: Read-only access
+
+    ```sql
+    -- Example RLS policy from schema
+    CREATE POLICY "requisiciones: admin and coordinadora can insert" 
+      ON requisiciones
+      FOR INSERT TO authenticated
+      WITH CHECK (get_my_role() IN ('admin', 'coordinadora'));
+    ```
+  </Step>
+
+  <Step title="Get Your API Keys">
+    1. Navigate to **Project Settings** (gear icon in sidebar)
+    2. Go to **API** section
+    3. Copy the following values:
+       - **Project URL**: Your `NEXT_PUBLIC_SUPABASE_URL`
+       - **anon/public key**: Your `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+       - **service_role key**: Your `SUPABASE_SERVICE_ROLE_KEY` (for admin operations)
+
+    <Warning>
+      The **service_role** key bypasses RLS. Never expose it on the client side or commit it to version control.
+    </Warning>
+
+    You'll need these values for your [environment variables](/deployment/environment-variables).
+  </Step>
+</Steps>
+
+## Verify Your Setup
+
+After completing the setup, verify everything is working:
+
+1. **Check Tables**: Go to **Table Editor** and confirm all tables are created
+2. **Check Seed Data**: Verify the following tables have initial data:
+   - `estatus` (6 status types)
+   - `unidades` (8 unit types)
+   - `destinos` (7 sample destinations)
+   - `presentaciones` (8 presentation types)
+   - `proveedores` (5 sample suppliers)
+   - `productos` (8 sample products)
+
+3. **Test Authentication**: Try creating a test user through the Auth interface
+
+## Database Indexes
+
+The schema includes performance-optimized indexes:
+
+```sql
+CREATE INDEX idx_requisiciones_fecha ON requisiciones(fecha_recepcion);
+CREATE INDEX idx_requisiciones_proveedor ON requisiciones(proveedor_id);
+CREATE INDEX idx_requisiciones_estatus ON requisiciones(estatus_id);
+CREATE INDEX idx_requisiciones_destino ON requisiciones(destino_id);
+```
+
+These indexes ensure fast queries when filtering requisiciones by date, supplier, status, or destination.
+
+## Automatic Triggers
+
+The schema includes several triggers that run automatically:
+
+- **Auto-create profile**: When a user signs up, a profile is automatically created in the `profiles` table
+- **Auto-update timestamp**: The `updated_at` field is automatically updated on requisiciones changes
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="code" href="/deployment/environment-variables">
+    Configure your application's environment variables
+  </Card>
+  <Card title="Schema Reference" icon="database" href="/database/schema">
+    Learn about the database schema in detail
+  </Card>
+</CardGroup>

@@ -1,0 +1,375 @@
+---
+title: "Requisition Types"
+description: "TypeScript interfaces for requisitions and related data structures"
+---
+
+## Requisicion
+
+Main requisition entity representing a procurement request.
+
+```typescript
+interface Requisicion {
+  id: string
+  fecha_recepcion: string
+  proveedor_id: string
+  producto_id: string
+  presentacion_id: string
+  destino_id: string
+  estatus_id: string
+  cantidad_solicitada: number
+  unidad_cantidad_id: string
+  numero_oc: string | null
+  requisicion_numero: string | null
+  fecha_oc: string | null
+  fecha_solicitada_entrega: string | null
+  fecha_confirmada: string | null
+  fecha_entregado: string | null
+  cantidad_entregada: number | null
+  factura_remision: string | null
+  comentarios: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+  // Joined relations
+  proveedor?: Proveedor
+  producto?: Producto
+  presentacion?: Presentacion
+  destino?: Destino
+  estatus?: Estatus
+  unidad_cantidad?: Unidad
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string">
+  Unique identifier (UUID)
+</ResponseField>
+
+<ResponseField name="fecha_recepcion" type="string">
+  Reception date (ISO 8601 format: YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="proveedor_id" type="string">
+  Foreign key to supplier (proveedores table)
+</ResponseField>
+
+<ResponseField name="producto_id" type="string">
+  Foreign key to product (productos table)
+</ResponseField>
+
+<ResponseField name="presentacion_id" type="string">
+  Foreign key to presentation (presentaciones table)
+</ResponseField>
+
+<ResponseField name="destino_id" type="string">
+  Foreign key to destination (destinos table)
+</ResponseField>
+
+<ResponseField name="estatus_id" type="string">
+  Foreign key to status (estatus table)
+</ResponseField>
+
+<ResponseField name="cantidad_solicitada" type="number">
+  Requested quantity
+</ResponseField>
+
+<ResponseField name="unidad_cantidad_id" type="string">
+  Foreign key to unit of measurement (unidades table)
+</ResponseField>
+
+<ResponseField name="numero_oc" type="string | null">
+  Purchase order number (optional)
+</ResponseField>
+
+<ResponseField name="requisicion_numero" type="string | null">
+  Requisition number (optional)
+</ResponseField>
+
+<ResponseField name="fecha_oc" type="string | null">
+  Purchase order date (ISO 8601 format, optional)
+</ResponseField>
+
+<ResponseField name="fecha_solicitada_entrega" type="string | null">
+  Requested delivery date (ISO 8601 format, optional)
+</ResponseField>
+
+<ResponseField name="fecha_confirmada" type="string | null">
+  Confirmed delivery date (ISO 8601 format, optional)
+</ResponseField>
+
+<ResponseField name="fecha_entregado" type="string | null">
+  Actual delivery date (ISO 8601 format, optional)
+</ResponseField>
+
+<ResponseField name="cantidad_entregada" type="number | null">
+  Delivered quantity (optional)
+</ResponseField>
+
+<ResponseField name="factura_remision" type="string | null">
+  Invoice or remission number (optional)
+</ResponseField>
+
+<ResponseField name="comentarios" type="string | null">
+  Additional comments (optional)
+</ResponseField>
+
+<ResponseField name="created_by" type="string">
+  User ID of the creator (foreign key to profiles)
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Timestamp of creation (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Timestamp of last update (ISO 8601 format)
+</ResponseField>
+
+### Joined Relations
+
+These fields are populated when using Supabase joins:
+
+<ResponseField name="proveedor" type="Proveedor">
+  Populated supplier object
+</ResponseField>
+
+<ResponseField name="producto" type="Producto">
+  Populated product object
+</ResponseField>
+
+<ResponseField name="presentacion" type="Presentacion">
+  Populated presentation object
+</ResponseField>
+
+<ResponseField name="destino" type="Destino">
+  Populated destination object
+</ResponseField>
+
+<ResponseField name="estatus" type="Estatus">
+  Populated status object
+</ResponseField>
+
+<ResponseField name="unidad_cantidad" type="Unidad">
+  Populated unit object
+</ResponseField>
+
+---
+
+## RequisicionFormData
+
+Form data structure for creating or updating requisitions. Similar to `Requisicion` but excludes system-managed fields.
+
+```typescript
+interface RequisicionFormData {
+  fecha_recepcion: string
+  proveedor_id: string
+  producto_id: string
+  presentacion_id: string
+  destino_id: string
+  estatus_id: string
+  cantidad_solicitada: number
+  unidad_cantidad_id: string
+  numero_oc?: string | null
+  requisicion_numero?: string | null
+  fecha_oc?: string | null
+  fecha_solicitada_entrega?: string | null
+  fecha_confirmada?: string | null
+  fecha_entregado?: string | null
+  cantidad_entregada?: number | null
+  factura_remision?: string | null
+  comentarios?: string | null
+}
+```
+
+### Required Fields
+
+<ResponseField name="fecha_recepcion" type="string" required>
+  Reception date
+</ResponseField>
+
+<ResponseField name="proveedor_id" type="string" required>
+  Supplier ID
+</ResponseField>
+
+<ResponseField name="producto_id" type="string" required>
+  Product ID
+</ResponseField>
+
+<ResponseField name="presentacion_id" type="string" required>
+  Presentation ID
+</ResponseField>
+
+<ResponseField name="destino_id" type="string" required>
+  Destination ID
+</ResponseField>
+
+<ResponseField name="estatus_id" type="string" required>
+  Status ID
+</ResponseField>
+
+<ResponseField name="cantidad_solicitada" type="number" required>
+  Requested quantity
+</ResponseField>
+
+<ResponseField name="unidad_cantidad_id" type="string" required>
+  Unit ID
+</ResponseField>
+
+### Optional Fields
+
+All other fields from `Requisicion` are optional in the form data.
+
+---
+
+## RequisicionFilters
+
+Filter criteria for querying requisitions.
+
+```typescript
+interface RequisicionFilters {
+  proveedor_id?: string
+  destino_id?: string
+  estatus_id?: string
+  fecha_desde?: string
+  fecha_hasta?: string
+  search?: string
+}
+```
+
+### Fields
+
+<ResponseField name="proveedor_id" type="string">
+  Filter by supplier ID
+</ResponseField>
+
+<ResponseField name="destino_id" type="string">
+  Filter by destination ID
+</ResponseField>
+
+<ResponseField name="estatus_id" type="string">
+  Filter by status ID
+</ResponseField>
+
+<ResponseField name="fecha_desde" type="string">
+  Start date for date range filter (ISO 8601: YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="fecha_hasta" type="string">
+  End date for date range filter (ISO 8601: YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="search" type="string">
+  Search term (implementation varies by usage)
+</ResponseField>
+
+### Example
+
+```typescript
+import type { RequisicionFilters } from '@/types'
+import { getRequisiciones } from '@/lib/actions/requisiciones'
+
+const filters: RequisicionFilters = {
+  proveedor_id: 'supplier-uuid',
+  fecha_desde: '2026-01-01',
+  fecha_hasta: '2026-03-31',
+  estatus_id: 'status-uuid'
+}
+
+const result = await getRequisiciones(filters)
+```
+
+---
+
+## CalendarEvent
+
+Event structure for calendar visualization of requisitions.
+
+```typescript
+interface CalendarEvent {
+  id: string
+  title: string
+  start: string
+  backgroundColor: string
+  borderColor: string
+  extendedProps: {
+    requisicion: Requisicion
+    proveedor_nombre: string
+    estatus_nombre: string
+    estatus_color: string
+  }
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="string">
+  Event ID (typically the requisition ID)
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Event title displayed on calendar
+</ResponseField>
+
+<ResponseField name="start" type="string">
+  Event date (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="backgroundColor" type="string">
+  Background color hex code (e.g., '#FF5733')
+</ResponseField>
+
+<ResponseField name="borderColor" type="string">
+  Border color hex code
+</ResponseField>
+
+<ResponseField name="extendedProps" type="object">
+  Additional event data
+  
+  <Expandable title="properties">
+    <ResponseField name="requisicion" type="Requisicion">
+      Full requisition object
+    </ResponseField>
+    
+    <ResponseField name="proveedor_nombre" type="string">
+      Supplier name
+    </ResponseField>
+    
+    <ResponseField name="estatus_nombre" type="string">
+      Status name
+    </ResponseField>
+    
+    <ResponseField name="estatus_color" type="string">
+      Status color hex code
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```typescript
+import type { CalendarEvent, Requisicion } from '@/types'
+
+function mapRequisicionToEvent(req: Requisicion): CalendarEvent {
+  return {
+    id: req.id,
+    title: `${req.proveedor?.nombre} - ${req.producto?.nombre}`,
+    start: req.fecha_recepcion,
+    backgroundColor: req.estatus?.color_hex || '#3788d8',
+    borderColor: req.estatus?.color_hex || '#3788d8',
+    extendedProps: {
+      requisicion: req,
+      proveedor_nombre: req.proveedor?.nombre || '',
+      estatus_nombre: req.estatus?.nombre || '',
+      estatus_color: req.estatus?.color_hex || '#3788d8'
+    }
+  }
+}
+```
+
+---
+
+## Related Types
+
+- [Catalog Types](/api/types/catalogos) - Proveedor, Producto, Presentacion, Destino, Estatus, Unidad
+- [Profile Types](/api/types/profiles) - RequisicionHistorial, Profile

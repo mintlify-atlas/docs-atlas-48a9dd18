@@ -1,0 +1,416 @@
+---
+title: "Data Model"
+description: "Entity relationships and TypeScript interfaces for the Procurement Calendar"
+---
+
+## Overview
+
+The Procurement Calendar data model is built around a central `Requisicion` entity that references multiple catalog tables. This normalized design ensures data consistency and simplifies maintenance.
+
+## Entity Relationship Diagram
+
+The data model follows this structure:
+
+```
+┌─────────────┐
+│ auth.users  │
+└──────┬──────┘
+       │
+       ├──────────────────┐
+       │                  │
+       ▼                  ▼
+┌─────────────┐    ┌──────────────┐
+│  profiles   │    │requisiciones │◄───────┐
+└─────────────┘    └──────┬───────┘        │
+                          │                │
+      ┌───────────────────┼────────┐       │
+      │                   │        │       │
+      ▼                   ▼        ▼       │
+┌──────────┐      ┌──────────┐  ┌──────────────────────┐
+│productos │      │estatus   │  │requisiciones_historial│
+└──────────┘      └──────────┘  └──────────────────────┘
+┌──────────────┐
+│proveedores   │──────────────────┘
+└──────────────┘
+┌──────────────┐
+│presentaciones│──────────────────┘
+└──────────────┘
+┌──────────────┐
+│destinos      │──────────────────┘
+└──────────────┘
+┌──────────────┐
+│unidades      │──────────────────┘
+└──────────────┘
+```
+
+<Info>
+Each requisition references 6 catalog tables plus the user who created it, forming a star schema pattern.
+</Info>
+
+## Core Entities
+
+### Requisicion (Requisition)
+
+The main business entity representing a purchase requisition.
+
+```typescript
+export interface Requisicion {
+    id: string
+    fecha_recepcion: string
+    proveedor_id: string
+    producto_id: string
+    presentacion_id: string
+    destino_id: string
+    estatus_id: string
+    cantidad_solicitada: number
+    unidad_cantidad_id: string
+    numero_oc: string | null
+    requisicion_numero: string | null
+    fecha_oc: string | null
+    fecha_solicitada_entrega: string | null
+    fecha_confirmada: string | null
+    fecha_entregado: string | null
+    cantidad_entregada: number | null
+    factura_remision: string | null
+    comentarios: string | null
+    created_by: string
+    created_at: string
+    updated_at: string
+    // Joined relations
+    proveedor?: Proveedor
+    producto?: Producto
+    presentacion?: Presentacion
+    destino?: Destino
+    estatus?: Estatus
+    unidad_cantidad?: Unidad
+}
+```
+
+<Accordion title="Field Descriptions">
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `fecha_recepcion` | Date | Date the requisition was received |
+| `proveedor_id` | UUID | Foreign key to supplier |
+| `producto_id` | UUID | Foreign key to product |
+| `presentacion_id` | UUID | Foreign key to presentation format |
+| `destino_id` | UUID | Foreign key to destination |
+| `estatus_id` | UUID | Foreign key to current status |
+| `cantidad_solicitada` | Numeric | Requested quantity (must be > 0) |
+| `unidad_cantidad_id` | UUID | Foreign key to unit of measurement |
+| `numero_oc` | Text | Purchase order number (optional) |
+| `comentarios` | Text | Additional comments (optional) |
+| `created_by` | UUID | Foreign key to user who created record |
+| `created_at` | Timestamp | Record creation timestamp |
+| `updated_at` | Timestamp | Last update timestamp (auto-updated) |
+</Accordion>
+
+<Note>
+The optional relation properties (`proveedor?`, `producto?`, etc.) are populated when using Supabase joins in queries.
+</Note>
+
+### Requisicion Historial (Audit History)
+
+Tracks all changes made to requisitions.
+
+```typescript
+export interface RequisicionHistorial {
+    id: string
+    requisicion_id: string
+    campo_modificado: string
+    valor_anterior: string | null
+    valor_nuevo: string | null
+    usuario_id: string
+    created_at: string
+    profiles?: Profile
+}
+```
+
+<Accordion title="Field Descriptions">
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `requisicion_id` | UUID | Foreign key to requisition being tracked |
+| `campo_modificado` | Text | Name of the field that was changed |
+| `valor_anterior` | Text | Previous value (serialized as text) |
+| `valor_nuevo` | Text | New value (serialized as text) |
+| `usuario_id` | UUID | User who made the change |
+| `created_at` | Timestamp | When the change occurred |
+</Accordion>
+
+## Catalog Entities
+
+All catalog entities share a similar structure with common fields.
+
+### Proveedor (Supplier)
+
+```typescript
+export interface Proveedor {
+    id: string
+    nombre: string
+    activo: boolean
+    created_at: string
+}
+```
+
+### Producto (Product)
+
+```typescript
+export interface Producto {
+    id: string
+    nombre: string
+    descripcion: string | null
+    activo: boolean
+    created_at: string
+}
+```
+
+<Info>
+Products include an optional `descripcion` field for additional details like chemical composition.
+</Info>
+
+### Presentacion (Presentation)
+
+```typescript
+export interface Presentacion {
+    id: string
+    nombre: string
+    activo: boolean
+    created_at: string
+}
+```
+
+**Example values**: "Tambor 200 L", "Saco 25 kg", "Granel"
+
+### Destino (Destination)
+
+```typescript
+export interface Destino {
+    id: string
+    nombre: string
+    activo: boolean
+    created_at: string
+}
+```
+
+**Example values**: "Almacén General", "Línea de Producción 1", "Planta Amozoc"
+
+### Estatus (Status)
+
+```typescript
+export interface Estatus {
+    id: string
+    nombre: string
+    color_hex: string
+    activo: boolean
+    created_at: string
+}
+```
+
+<Accordion title="Default Status Values">
+| Status | Color Hex | Description |
+|--------|-----------|-------------|
+| Pendiente | `#F59E0B` | Requisition pending review |
+| Confirmado | `#3B82F6` | Order confirmed with supplier |
+| En Tránsito | `#8B5CF6` | Shipment in transit |
+| Recibido | `#10B981` | Product received at destination |
+| Cancelado | `#EF4444` | Requisition cancelled |
+| En Revisión | `#F97316` | Under review or audit |
+</Accordion>
+
+### Unidad (Unit)
+
+```typescript
+export interface Unidad {
+    id: string
+    nombre: string
+    abreviatura: string
+    activo: boolean
+    created_at: string
+}
+```
+
+<Accordion title="Default Units">
+| Unit | Abbreviation |
+|------|-------------|
+| Kilogramos | kg |
+| Litros | L |
+| Piezas | pzs |
+| Toneladas | ton |
+| Cajas | caj |
+| Sacos | sac |
+| Tambos | tam |
+| Gramos | g |
+</Accordion>
+
+## User Management
+
+### Profile
+
+Extends Supabase authentication with application-specific data.
+
+```typescript
+export interface Profile {
+    id: string
+    nombre_completo: string | null
+    email: string | null
+    rol: UserRole
+    created_at: string
+    updated_at: string
+}
+```
+
+### User Roles
+
+```typescript
+export type UserRole = 'admin' | 'coordinadora' | 'laboratorio' | 'cedis' | 'pendiente' | 'consulta'
+```
+
+<CardGroup cols={3}>
+  <Card title="admin" icon="user-shield">
+    Full system access and user management
+  </Card>
+  <Card title="coordinadora" icon="user-pen">
+    Create and update requisitions
+  </Card>
+  <Card title="consulta" icon="user">
+    Read-only access to data
+  </Card>
+</CardGroup>
+
+<Warning>
+The database schema defines only `'admin'`, `'coordinadora'`, and `'consulta'` in the enum. Additional roles in TypeScript may be used for future features.
+</Warning>
+
+## Form Data Types
+
+### Requisicion Form Data
+
+Used when creating or updating requisitions.
+
+```typescript
+export interface RequisicionFormData {
+    fecha_recepcion: string
+    proveedor_id: string
+    producto_id: string
+    presentacion_id: string
+    destino_id: string
+    estatus_id: string
+    cantidad_solicitada: number
+    unidad_cantidad_id: string
+    numero_oc?: string | null
+    requisicion_numero?: string | null
+    fecha_oc?: string | null
+    fecha_solicitada_entrega?: string | null
+    fecha_confirmada?: string | null
+    fecha_entregado?: string | null
+    cantidad_entregada?: number | null
+    factura_remision?: string | null
+    comentarios?: string | null
+}
+```
+
+<Note>
+Form data omits system-managed fields like `id`, `created_by`, `created_at`, and `updated_at`.
+</Note>
+
+### Requisicion Filters
+
+Used for filtering requisitions in list views.
+
+```typescript
+export interface RequisicionFilters {
+    proveedor_id?: string
+    destino_id?: string
+    estatus_id?: string
+    fecha_desde?: string
+    fecha_hasta?: string
+    search?: string
+}
+```
+
+## Calendar Integration
+
+### Calendar Event
+
+Transforms requisition data for FullCalendar display.
+
+```typescript
+export interface CalendarEvent {
+    id: string
+    title: string
+    start: string
+    backgroundColor: string
+    borderColor: string
+    extendedProps: {
+        requisicion: Requisicion
+        proveedor_nombre: string
+        estatus_nombre: string
+        estatus_color: string
+    }
+}
+```
+
+<Info>
+The `backgroundColor` and `borderColor` are derived from the `estatus.color_hex` field.
+</Info>
+
+## Aggregated Types
+
+### Catalogos
+
+Convenience type for passing all catalog data together.
+
+```typescript
+export interface Catalogos {
+    proveedores: Proveedor[]
+    productos: Producto[]
+    presentaciones: Presentacion[]
+    destinos: Destino[]
+    estatus: Estatus[]
+    unidades: Unidad[]
+}
+```
+
+<Accordion title="Usage Example">
+```typescript
+// Fetch all catalogs at once
+const catalogos: Catalogos = await fetchAllCatalogs();
+
+// Use in components
+<ProveedorSelect options={catalogos.proveedores} />
+<EstatusSelect options={catalogos.estatus} />
+```
+</Accordion>
+
+## Relationships Summary
+
+<CardGroup cols={2}>
+  <Card title="One-to-Many" icon="arrow-right-to-bracket">
+    Each catalog entry can be referenced by many requisitions
+  </Card>
+  <Card title="Many-to-One" icon="arrow-left-to-bracket">
+    Each requisition references exactly one entry from each catalog
+  </Card>
+  <Card title="Cascade Deletes" icon="trash">
+    Deleting a requisition cascades to its history records
+  </Card>
+  <Card title="Foreign Key Constraints" icon="link">
+    All relationships enforced at database level
+  </Card>
+</CardGroup>
+
+<Warning>
+Deleting catalog entries that are referenced by requisitions will fail due to foreign key constraints. Mark items as inactive (`activo = false`) instead.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Schema" icon="table" href="/database/schema">
+    View the complete SQL schema
+  </Card>
+  <Card title="Row Level Security" icon="shield-halved" href="/database/security">
+    Learn about access control policies
+  </Card>
+</CardGroup>
