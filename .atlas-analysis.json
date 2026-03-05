@@ -1,0 +1,107 @@
+{
+  "projectType": "saas",
+  "projectName": "Procurement Calendar",
+  "projectDescription": "Enterprise procurement management system for tracking purchase requisitions, managing supplier deliveries, and coordinating logistics for Cloro de Hidalgo",
+  "theme": "almond",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#070707",
+  "darkColor": "#c4c4c4",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/requisitions",
+              "features/calendar",
+              "features/catalogs",
+              "features/roles"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/admin-workflow",
+              "guides/coordinator-workflow",
+              "guides/lab-workflow",
+              "guides/cedis-workflow"
+            ]
+          },
+          {
+            "group": "Database",
+            "pages": [
+              "database/schema",
+              "database/data-model",
+              "database/security"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/supabase-setup",
+              "deployment/environment-variables",
+              "deployment/production"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Server Actions",
+            "pages": [
+              "api/auth",
+              "api/requisiciones",
+              "api/catalogos",
+              "api/users"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types/requisicion",
+              "api/types/catalogos",
+              "api/types/profiles"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Purchase requisition tracking with multi-step workflow",
+    "Interactive calendar view for delivery scheduling",
+    "Master data catalogs (suppliers, products, destinations)",
+    "Role-based access control (Admin, Coordinator, Lab, CEDIS)",
+    "Real-time collaboration with Supabase",
+    "Audit trail for requisition changes",
+    "Filter and search capabilities",
+    "Date tracking (requested, confirmed, delivered)"
+  ],
+  "publicApiSurface": [
+    "createRequisicion(data: RequisicionFormData)",
+    "updateRequisicion(id: string, data: Partial<RequisicionFormData>)",
+    "deleteRequisicion(id: string)",
+    "getRequisiciones(filters?: RequisicionFilters)",
+    "getRequisicionById(id: string)",
+    "getCatalogos()",
+    "createCatalogItem(table: string, data: object)",
+    "updateCatalogItem(table: string, id: string, data: object)",
+    "deleteCatalogItem(table: string, id: string)",
+    "getCurrentProfile()",
+    "updateProfile(id: string, data: Partial<Profile>)",
+    "getUsers()",
+    "updateUserRole(userId: string, rol: UserRole)"
+  ]
+}
